@@ -1,9 +1,10 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
 name: .NET Pre-Release
 
 on:
   push:
     branches: [ master ]
-
   workflow_dispatch:
 
 jobs:
@@ -26,7 +27,7 @@ jobs:
       run: dotnet build LinuxSolution.sln --no-restore
     - name: Test
       run: dotnet test LinuxSolution.sln --no-build --verbosity normal
-      
+
     - name: Publish WindowsServer
       run: dotnet publish Barotrauma/BarotraumaServer/WindowsServer.csproj -c Release -clp:"ErrorsOnly;Summary" --self-contained -r win-x64 \/p:Platform="x64"
     - name: Publish WindowsClient
@@ -42,38 +43,34 @@ jobs:
     - name: Publish MacClient
       run: dotnet publish Barotrauma/BarotraumaClient/MacClient.csproj -c Release -clp:"ErrorsOnly;Summary" --self-contained -r osx-x64 \/p:Platform="x64"
 
-      
     - name: Archive Windows Release
       uses: thedoctor0/zip-release@main
       with:
-        type: 'zip'
-        filename: 'barotrauma_lua_windows.zip'
-        #exclusions: '*.git* /*node_modules/* .editorconfig'
-        directory: 'Barotrauma/bin/ReleaseWindows/netcoreapp3.1/win-x64/publish'
-        
+        type: zip
+        filename: barotrauma_lua_windows.zip
+        directory: Barotrauma/bin/ReleaseWindows/netcoreapp3.1/win-x64/publish
+
     - name: Archive Linux Release
       uses: thedoctor0/zip-release@main
       with:
-        type: 'zip'
-        filename: 'barotrauma_lua_linux.zip'
-        #exclusions: '*.git* /*node_modules/* .editorconfig'
-        directory: 'Barotrauma/bin/ReleaseLinux/netcoreapp3.1/linux-x64/publish'
-        
+        type: zip
+        filename: barotrauma_lua_linux.zip
+        directory: Barotrauma/bin/ReleaseLinux/netcoreapp3.1/linux-x64/publish
+
     - name: Archive Mac Release
       uses: thedoctor0/zip-release@main
       with:
-        type: 'zip'
-        filename: 'barotrauma_lua_mac.zip'
-        #exclusions: '*.git* /*node_modules/* .editorconfig'
-        directory: 'Barotrauma/bin/ReleaseMac/netcoreapp3.1/osx-x64/publish'
-        
+        type: zip
+        filename: barotrauma_lua_mac.zip
+        directory: Barotrauma/bin/ReleaseMac/netcoreapp3.1/osx-x64/publish
+
     - name: Automatic Release
       uses: marvinpinto/action-automatic-releases@v1.2.1
       with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: latest
           prerelease: false
-          title: "Automatic Build"
+          title: Automatic Build
           files: |
             Barotrauma/bin/ReleaseWindows/netcoreapp3.1/win-x64/publish/barotrauma_lua_windows.zip
             Barotrauma/bin/ReleaseLinux/netcoreapp3.1/linux-x64/publish/barotrauma_lua_linux.zip

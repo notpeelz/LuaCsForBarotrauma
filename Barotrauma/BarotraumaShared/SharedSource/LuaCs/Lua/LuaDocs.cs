@@ -11,13 +11,14 @@ using System.Net;
 using System.Linq;
 using System.Xml.Linq;
 using System.Reflection;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Barotrauma
 {
 
 	public static class LuaDocs
 	{
-
 		public static string ConvertTypeName(string type)
 		{
 			switch (type)
@@ -68,8 +69,68 @@ namespace Barotrauma
 			return n;
 		}
 
-		public static void GenerateDocsAll()
+        private static (bool Success, string Output, string Error) TryRunGitCommand(string args)
+        {
+            static string GetGitBinary()
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
+                        ?.Split(';')
+                        .Select(x => Path.Join(x, "git.exe"))
+                        .FirstOrDefault(File.Exists);
+                }
+                else
+                {
+                    return Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
+                        ?.Split(':')
+                        .Select(x => Path.Join(x, "git"))
+                        .FirstOrDefault(File.Exists);
+                }
+            }
+
+            var gitBinary = GetGitBinary();
+            if (gitBinary == null)
+            {
+                throw new InvalidOperationException("Failed to find git binary in PATH");
+            }
+
+            using var process = Process.Start(new ProcessStartInfo(gitBinary, args)
+            {
+                WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+            });
+
+            process.Start();
+
+            var stdOut = process.StandardOutput.ReadToEndAsync();
+            var stdErr = process.StandardError.ReadToEndAsync();
+            Task.WhenAll(stdOut, stdErr).GetAwaiter().GetResult();
+            process.WaitForExit();
+
+            return (process.ExitCode == 0, stdOut.Result.TrimEnd('\r', '\n'), stdErr.Result);
+        }
+
+
+        private static readonly Lazy<string> GitDir = new Lazy<string>(() =>
+        {
+            var (success, gitDir, error) = TryRunGitCommand("rev-parse --show-toplevel");
+            if (!success)
+            {
+                throw new InvalidDataException($"Failed to determine the root of the git repo: {error}");
+            }
+
+            return gitDir;
+        });
+
+		public static void GenerateDocs()
 		{
+			var basePath = $"{GitDir.Value}/luacs-docs/lua";
+			Directory.Delete($"{basePath}/lua/generated", true);
 			GenerateDocs(typeof(Character), "Character.lua");
 			GenerateDocs(typeof(CharacterInfo), "CharacterInfo.lua");
 			GenerateDocs(typeof(CharacterHealth), "CharacterHealth.lua");
@@ -99,12 +160,13 @@ namespace Barotrauma
 			GenerateDocs(typeof(GameSettings), "GameSettings.lua", "Game.Settings");
 		}
 
-		public static void GenerateDocs(Type type, string name, string categoryName = null)
+		private static void GenerateDocs(Type type, string file, string categoryName = null)
 		{
-			GenerateDocs(type, "../../../../docs/baseluadocs/" + name, "../../../../docs/lua/generated/" + name, categoryName);
+			var basePath = $"{GitDir.Value}/luacs-docs/lua";
+			GenerateDocs(type, $"{basePath}/baseluadocs/{file}", $"{basePath}/lua/generated/{file}", categoryName);
 		}
 
-		public static void GenerateDocs(Type type, string baselua, string fileresult, string categoryName = null)
+		private static void GenerateDocs(Type type, string baselua, string fileresult, string categoryName = null)
 		{
 			var sb = new StringBuilder();
 
@@ -241,7 +303,7 @@ local {type.Name} = {EMPTY_TABLE}";
 
 					var returnName = ConvertTypeName(property.PropertyType.Name);
 
-					if (property.GetGetMethod().IsStatic)
+					if (property.GetGetMethod()?.IsStatic == true || property.GetSetMethod()?.IsStatic == true)
 						name = type.Name + "." + property.Name;
 
 					if (removed.Contains(name))
@@ -257,6 +319,7 @@ local {type.Name} = {EMPTY_TABLE}";
 				}
 			}
 
+			new FileInfo(fileresult).Directory.Create();
 			File.WriteAllText(fileresult, sb.ToString());
 		}
 	}
