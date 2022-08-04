@@ -33,7 +33,7 @@ function Character.Create(characterInfo, position, seed, id, isRemotePlayer, has
 
 --- Teleports a character to a position.
 -- @realm server 
--- @tparam Vector2 position
+-- @tparam Vector2 worldPos
 -- @usage 
 -- Character.CharacterList[1].TeleportTo(Vector2(0, 0)) -- teleports first created characters to 0, 0
 function TeleportTo(worldPos) end

@@ -10,8 +10,8 @@ local Hook = {}
 
 
 --- Adds a hook.
--- @tparam string eventname event name
--- @tparam string hookname hook name
+-- @tparam string eventName event name
+-- @tparam string hookName hook name
 -- @tparam function func callback
 -- @realm shared
 -- @usage 
@@ -21,15 +21,15 @@ local Hook = {}
 function Hook.Add(eventName, hookName, func) end
 
 --- Removes a hook.
--- @tparam string eventname event name
--- @tparam string hookname hook name
+-- @tparam string eventName event name
+-- @tparam string hookName hook name
 -- @realm shared
 -- @usage 
 -- Hook.Remove("character.death", "characterDeathExample")
 function Hook.Remove(eventName, hookName) end
 
 --- Calls a hook.
--- @tparam string eventname event name
+-- @tparam string eventName event name
 -- @tparam table parameters parameters to be passed in 
 -- @realm shared
 -- @usage 
