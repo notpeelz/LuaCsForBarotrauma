@@ -6,37 +6,7 @@
 
 <p>{* ldoc.markup(mod.description) *}</p>
 
-{%
-  local kinds = {}
-  local kindsIpairs = {}
-  for kind, items, _, summary in mod.kinds() do
-    local name = kind
-    if kind == "Tables" then
-      name = "Fields"
-    end
-
-    for item in items() do
-      if kinds[name] == nil then
-        kinds[name] = {}
-
-        local value = {}
-        value.kind = name
-        value.summary = summary
-        value.items = kinds[name]
-        table.insert(kindsIpairs, value)
-      end
-      kinds[name][item] = true
-    end
-  end
-
-
-%}
-
-{% for i, value in ipairs(kindsIpairs) do
-  local kind = value.kind
-  local summary = value.summary
-  local items = value.items
-%}
+{% for kind, items, _, summary in mod.kinds() do %}
   <header class="section">
     <h1>{{kind}}</h1>
     {% if summary ~= nil then %}
@@ -45,7 +15,7 @@
     {% end %}
   </header>
 
-  {% for item, _ in pairs(items) do %}
+  {% for item in items() do %}
     <section class="method" id="{{item.name}}">
       <header>
         {* ldoc.item_header(item) *}

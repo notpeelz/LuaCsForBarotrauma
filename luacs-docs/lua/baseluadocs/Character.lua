@@ -41,4 +41,4 @@ function TeleportTo(worldPos) end
 ---
 -- Character.CharacterList, Table containing all characters.
 -- @realm shared
--- @table Character.CharacterList
+-- @field Character.CharacterList
