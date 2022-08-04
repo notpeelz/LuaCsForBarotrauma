@@ -1,7 +1,7 @@
 -- luacheck: ignore 111
 
 --[[--
-Hooks are basically functions that get called when events happen in-game, like chat messages.
+The Hook API allow you to listen to game events and modify the behavior/logic of the game.
 ]]
 -- @code Hook
 -- @pragma nostrip
@@ -49,6 +49,13 @@ function Hook.Call(eventName, parameters) end
 --    print(string.format("%s gained % xp", instance.Character.Name, ptable.increase))
 -- end, Hook.HookMethodType.After)
 function Hook.HookMethod(className, methodName, callback) end
+
+--- Hooks
+-- @summary
+-- Hooks are functions that get called when events happen in-game, e.g. chat messages.
+--
+-- These can be used with `Hook.Add` and `Hook.Call`.
+-- @section hook
 
 --- Game's fixed update rate, gets called normally 60 times a second.
 -- @realm shared
