@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using LuaCsCompatPatchFunc = Barotrauma.LuaCsPatch;
 
 [assembly: InternalsVisibleTo(Barotrauma.CsScriptBase.CsScriptAssembly, AllInternalsVisible = true)]
 [assembly: InternalsVisibleTo(Barotrauma.CsScriptBase.CsOneTimeScriptAssembly, AllInternalsVisible = true)]
@@ -396,7 +397,8 @@ namespace Barotrauma
 			UserData.RegisterType<LuaCsConfig>();
 			UserData.RegisterType<LuaCsAction>();
 			UserData.RegisterType<LuaCsFile>();
-			UserData.RegisterType<LuaCsPatch>();
+			UserData.RegisterType<LuaCsCompatPatchFunc>();
+			UserData.RegisterType<LuaCsPatchFunc>();
 			UserData.RegisterType<LuaCsConfig>();
 			UserData.RegisterType<CsScriptRunner>();
 			UserData.RegisterType<LuaGame>();

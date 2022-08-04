@@ -1,31 +1,31 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using MoonSharp.Interpreter;
 using HarmonyLib;
 using System.Collections.Generic;
-using System.Text;
-using MoonSharp.Interpreter.Interop;
+using MoonSharp.Interpreter;
 using static Barotrauma.LuaCsSetup;
-using System.Threading;
-using System.Diagnostics;
+using LuaCsCompatPatchFunc = Barotrauma.LuaCsPatch;
 
 namespace Barotrauma
 {
-    partial class LuaCsHook
-    {
-		private Dictionary<long, HashSet<(string, LuaCsPatch, ACsMod)>> compatHookPrefixMethods;
-		private Dictionary<long, HashSet<(string, LuaCsPatch, ACsMod)>> compatHookPostfixMethods;
+	// XXX: this can't be renamed because of backward compatibility with C# mods
+	public delegate object LuaCsPatch(object self, Dictionary<string, object> args);
 
-		private static void _hookLuaCsPatch(MethodBase __originalMethod, object[] __args, object __instance, out object result, HookMethodType hookMethodType)
+	partial class LuaCsHook
+    {
+		private Dictionary<long, HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>> compatHookPrefixMethods = new Dictionary<long, HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>>();
+		private Dictionary<long, HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>> compatHookPostfixMethods = new Dictionary<long, HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>>();
+
+		private static void _hookLuaCsPatch(MethodBase __originalMethod, object[] __args, object __instance, out object result, HookMethodType hookType)
 		{
 			result = null;
 
 			try
 			{
 				var funcAddr = ((long)__originalMethod.MethodHandle.GetFunctionPointer());
-				HashSet<(string, LuaCsPatch, ACsMod)> methodSet = null;
-				switch (hookMethodType)
+				HashSet<(string, LuaCsCompatPatchFunc, ACsMod)> methodSet = null;
+				switch (hookType)
 				{
 					case HookMethodType.Before:
 						instance.compatHookPrefixMethods.TryGetValue(funcAddr, out methodSet);
@@ -34,7 +34,7 @@ namespace Barotrauma
 						instance.compatHookPostfixMethods.TryGetValue(funcAddr, out methodSet);
 						break;
 					default:
-						break;
+						throw new ArgumentException($"Invalid {nameof(HookMethodType)} enum value.", nameof(hookType));
 				}
 
 				if (methodSet != null)
@@ -46,7 +46,7 @@ namespace Barotrauma
 						args.Add(@params[i].Name, __args[i]);
 					}
 
-					var outOfScope = new HashSet<(string, LuaCsPatch, ACsMod)>();
+					var outOfScope = new HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>();
 					foreach (var tuple in methodSet)
 					{
 						if (tuple.Item3 != null && tuple.Item3.IsDisposed)
@@ -91,6 +91,7 @@ namespace Barotrauma
 			_hookLuaCsPatch(__originalMethod, __args, __instance, out object result, HookMethodType.Before);
 			return result == null;
 		}
+
 		private static void HookLuaCsPatchPostfix(MethodBase __originalMethod, object[] __args, object __instance) =>
 			_hookLuaCsPatch(__originalMethod, __args, __instance, out object _, HookMethodType.After);
 
@@ -104,50 +105,19 @@ namespace Barotrauma
 			}
 			else return true;
 		}
+
 		private static void HookLuaCsPatchRetPostfix(MethodBase __originalMethod, object[] __args, ref object __result, object __instance)
 		{
 			_hookLuaCsPatch(__originalMethod, __args, __instance, out object result, HookMethodType.After);
 			if (result != null) __result = result;
 		}
 
-
 		private static MethodInfo _miHookLuaCsPatchPrefix = typeof(LuaCsHook).GetMethod("HookLuaCsPatchPrefix", BindingFlags.NonPublic | BindingFlags.Static);
 		private static MethodInfo _miHookLuaCsPatchPostfix = typeof(LuaCsHook).GetMethod("HookLuaCsPatchPostfix", BindingFlags.NonPublic | BindingFlags.Static);
 		private static MethodInfo _miHookLuaCsPatchRetPrefix = typeof(LuaCsHook).GetMethod("HookLuaCsPatchRetPrefix", BindingFlags.NonPublic | BindingFlags.Static);
 		private static MethodInfo _miHookLuaCsPatchRetPostfix = typeof(LuaCsHook).GetMethod("HookLuaCsPatchRetPostfix", BindingFlags.NonPublic | BindingFlags.Static);
 
-		private static MethodInfo ResolveMethod(string where, string className, string methodName, string[] parameterNames)
-		{
-			var classType = LuaUserData.GetType(className);
-
-			if (classType == null)
-			{
-				GameMain.LuaCs.HandleException(new Exception($"Tried to use {where} with an invalid class name '{className}'."));
-				return null;
-			}
-
-			MethodInfo methodInfo = null;
-
-			if (parameterNames != null)
-			{
-				Type[] parameterTypes = parameterNames.Select(x => LuaUserData.GetType(x)).ToArray();
-				methodInfo = classType.GetMethod(methodName, DefaultBindingFlags, null, parameterTypes, null);
-			}
-			else
-			{
-				methodInfo = classType.GetMethod(methodName, DefaultBindingFlags);
-			}
-
-			if (methodInfo == null)
-			{
-				string parameterNamesStr = parameterNames == null ? "" : string.Join(", ", parameterNames);
-				GameMain.LuaCs.HandleException(new Exception($"Method '{methodName}' with parameters '{parameterNamesStr}' not found in class '{className}'"));
-			}
-
-			return methodInfo;
-		}
-
-		public void HookMethod(string identifier, MethodInfo method, LuaCsPatch patch, HookMethodType hookType = HookMethodType.Before, ACsMod owner = null)
+		public void HookMethod(string identifier, MethodInfo method, LuaCsCompatPatchFunc patch, HookMethodType hookType = HookMethodType.Before, ACsMod owner = null)
 		{
 			if (identifier == null || method == null || patch == null)
 			{
@@ -176,7 +146,7 @@ namespace Barotrauma
 					}
 				}
 
-				if (compatHookPrefixMethods.TryGetValue(funcAddr, out HashSet<(string, LuaCsPatch, ACsMod)> methodSet))
+				if (compatHookPrefixMethods.TryGetValue(funcAddr, out HashSet<(string, LuaCsCompatPatchFunc, ACsMod)> methodSet))
 				{
 					if (identifier != "")
 					{
@@ -187,7 +157,7 @@ namespace Barotrauma
 				}
 				else if (patch != null)
 				{
-					compatHookPrefixMethods.Add(funcAddr, new HashSet<(string, LuaCsPatch, ACsMod)>() { (identifier, patch, owner) });
+					compatHookPrefixMethods.Add(funcAddr, new HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>() { (identifier, patch, owner) });
 				}
 
 			}
@@ -208,7 +178,7 @@ namespace Barotrauma
 					}
 				}
 
-				if (compatHookPostfixMethods.TryGetValue(funcAddr, out HashSet<(string, LuaCsPatch, ACsMod)> methodSet))
+				if (compatHookPostfixMethods.TryGetValue(funcAddr, out HashSet<(string, LuaCsCompatPatchFunc, ACsMod)> methodSet))
 				{
 					if (identifier != "")
 					{
@@ -219,25 +189,25 @@ namespace Barotrauma
 				}
 				else if (patch != null)
 				{
-					compatHookPostfixMethods.Add(funcAddr, new HashSet<(string, LuaCsPatch, ACsMod)>() { (identifier, patch, owner) });
+					compatHookPostfixMethods.Add(funcAddr, new HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>() { (identifier, patch, owner) });
 				}
-
 			}
-
 		}
-
-		protected void HookMethod(string identifier, string className, string methodName, string[] parameterNames, LuaCsPatch patch, HookMethodType hookMethodType = HookMethodType.Before)
+		protected void HookMethod(string identifier, string className, string methodName, string[] parameterNames, LuaCsCompatPatchFunc patch, HookMethodType hookMethodType = HookMethodType.Before)
 		{
-
-			MethodInfo methodInfo = ResolveMethod("HookMethod", className, methodName, parameterNames);
+			var methodInfo = ResolveMethod(className, methodName, parameterNames);
 			if (methodInfo == null) return;
+			if (methodInfo.GetParameters().Any(x => x.ParameterType.IsByRef))
+            {
+				throw new InvalidOperationException($"{nameof(HookMethod)} doesn't support ByRef parameters; use {nameof(Patch)} instead.");
+            }
 			HookMethod(identifier, methodInfo, patch, hookMethodType);
 		}
-		protected void HookMethod(string identifier, string className, string methodName, LuaCsPatch patch, HookMethodType hookMethodType = HookMethodType.Before) =>
+		protected void HookMethod(string identifier, string className, string methodName, LuaCsCompatPatchFunc patch, HookMethodType hookMethodType = HookMethodType.Before) =>
 			HookMethod(identifier, className, methodName, null, patch, hookMethodType);
-		protected void HookMethod(string className, string methodName, LuaCsPatch patch, HookMethodType hookMethodType = HookMethodType.Before) =>
+		protected void HookMethod(string className, string methodName, LuaCsCompatPatchFunc patch, HookMethodType hookMethodType = HookMethodType.Before) =>
 			HookMethod("", className, methodName, null, patch, hookMethodType);
-		protected void HookMethod(string className, string methodName, string[] parameterNames, LuaCsPatch patch, HookMethodType hookMethodType = HookMethodType.Before) =>
+		protected void HookMethod(string className, string methodName, string[] parameterNames, LuaCsCompatPatchFunc patch, HookMethodType hookMethodType = HookMethodType.Before) =>
 			HookMethod("", className, methodName, parameterNames, patch, hookMethodType);
 
 
@@ -245,7 +215,7 @@ namespace Barotrauma
 		{
 			var funcAddr = ((long)method.MethodHandle.GetFunctionPointer());
 
-			Dictionary<long, HashSet<(string, LuaCsPatch, ACsMod)>> methods;
+			Dictionary<long, HashSet<(string, LuaCsCompatPatchFunc, ACsMod)>> methods;
 			if (hookType == HookMethodType.Before) methods = compatHookPrefixMethods;
 			else if (hookType == HookMethodType.After) methods = compatHookPostfixMethods;
 			else throw null;
@@ -254,7 +224,7 @@ namespace Barotrauma
 		}
 		protected void UnhookMethod(string identifier, string className, string methodName, string[] parameterNames, HookMethodType hookType = HookMethodType.Before)
 		{
-			MethodInfo methodInfo = ResolveMethod("UnhookMathod", className, methodName, parameterNames);
+			var methodInfo = ResolveMethod(className, methodName, parameterNames);
 			if (methodInfo == null) return;
 			UnhookMethod(identifier, methodInfo, hookType);
 		}

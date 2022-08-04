@@ -4,10 +4,10 @@ using System.Text;
 using MoonSharp.Interpreter;
 using Microsoft.Xna.Framework;
 using FarseerPhysics.Dynamics;
+using LuaCsCompatPatchFunc = Barotrauma.LuaCsPatch;
 
 namespace Barotrauma
 {
-
 	public static class LuaCustomConverters
 	{
 		public static void RegisterAll()
@@ -31,8 +31,12 @@ namespace Barotrauma
                 v => (LuaCsFunc)(args => GameMain.LuaCs.CallLuaFunction(v.Function, args)));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 DataType.Function,
-                typeof(LuaCsPatch),
-                v => (LuaCsPatch)((self, args) => GameMain.LuaCs.CallLuaFunction(v.Function, self, args)));
+                typeof(LuaCsCompatPatchFunc),
+                v => (LuaCsCompatPatchFunc)((self, args) => GameMain.LuaCs.CallLuaFunction(v.Function, self, args)));
+            Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
+                DataType.Function,
+                typeof(LuaCsPatchFunc),
+                v => (LuaCsPatchFunc)((self, args) => GameMain.LuaCs.CallLuaFunction(v.Function, self, args)));
 
 #if CLIENT
             RegisterAction<float>();

@@ -141,6 +141,7 @@
     <PackageReference Include="MonoMod.Common" Version="22.5.1.1" />
     <PackageReference Include="NVorbis" Version="0.8.6" />
     <PackageReference Include="RestSharp" Version="106.13.0" />
+    <PackageReference Include="Sigil" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
