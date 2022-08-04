@@ -1,5 +1,7 @@
 
 {%
+math.randomseed(os.time())
+
 local baseUrl = ldoc.css:gsub("ldoc.css", "")
 local repo = "https://github.com/evilfactory/LuaCsForBarotrauma"
 local pageTitle = mod and (ldoc.display_name(mod) .. " - " .. ldoc.title) or ldoc.title
@@ -11,6 +13,13 @@ end
 
 function ldoc.url(path)
   return baseUrl .. path
+end
+
+function ldoc.asset_url(path)
+  local uuid = string.gsub("xxxxxxx", "x", function(c)
+    return string.format("%x", math.random(0, 0xf))
+  end)
+  return baseUrl .. path .. "?v=" .. uuid
 end
 
 function ldoc.realm_icon(realm)
@@ -97,8 +106,8 @@ end
     {% end %}
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro" />
-    <link rel="stylesheet" href="{* ldoc.css *}" />
-    <link rel="stylesheet" href="{* ldoc.url('highlight.css') *}" />
+    <link rel="stylesheet" href="{* ldoc.asset_url("ldoc.css") *}" />
+    <link rel="stylesheet" href="{* ldoc.asset_url("highlight.css") *}" />
   </head>
 
   <body>
@@ -120,8 +129,8 @@ end
       </article>
     </main>
 
-    <script type="text/javascript" src="{* ldoc.url('app.js') *}"></script>
-    <script type="text/javascript" src="{* ldoc.url('highlight.min.js') *}"></script>
+    <script type="text/javascript" src="{* ldoc.asset_url("app.js") *}"></script>
+    <script type="text/javascript" src="{* ldoc.asset_url("highlight.min.js") *}"></script>
     <script type="text/javascript">
       var elements = document.querySelectorAll("pre code")
 
