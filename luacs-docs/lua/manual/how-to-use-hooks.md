@@ -33,19 +33,52 @@ With Lua, a new XML tags is added, it can be used to call Lua hooks inside statu
 ```
 
 ```
-Hook.Add("doSomething", "something", function (effect, deltaTime, item, targets, worldPosition)
+Hook.Add("doSomething", "something", function(effect, deltaTime, item, targets, worldPosition)
     print(effect, ' ', item)
 end)
 ```
 
 ## Patching
 
-Patching allows you to hook into existing methods in the game code, notice that it can be a little unstable depending on the method that you are patching, so be aware.
+Patching allows you to hook into existing methods in the game code.
+Be aware that it can be a little unstable depending on the method that you are patching.
+
+If your lua function returns **any** value (including `nil`), it will replace
+the return value of the original method.
+
+### Postfix
+
+Postfixes are functions that get called after the original method executes.
 
 ```
-Hook.HookMethod("Barotrauma.CharacterInfo", "IncreaseSkillLevel", function (instance, ptable)
-    print(string.format("%s gained % xp", instance.Character.Name, ptable.increase))
+Hook.Patch("Barotrauma.CharacterInfo", "IncreaseSkillLevel", function(instance, ptable)
+  print(string.format("%s gained % xp", instance.Character.Name, ptable["increase"]))
 end, Hook.HookMethodType.After)
 ```
 
-If you return anything other than nil, it will stop the execution of the method, if the method has a return type, it will also return what you returned in the Lua function. (Only in Hook.HookMethodType.After)
+### Prefix
+
+Prefixes are functions that get called before the original method executes.
+For more advanced use cases, they can also be used to modify the incoming
+parameters or prevent the original method from executing.
+
+```
+Hook.Patch(
+  "Barotrauma.Character",
+  "CanInteractWith",
+  {
+    "Barotrauma.Item",
+     -- ref/out parameters are supported
+     "out System.Single",
+     "System.Boolean"
+  },
+  function(instance, ptable)
+    -- This prevents the original method from executing, so we're
+    -- effectively replacing the method entirely.
+    ptable.PreventExecution = true
+    -- Modify the `out System.Single` parameter
+    ptable["distanceToItem"] = Single(50)
+    -- This changes the return value to "null"
+    return nil
+  end, Hook.HookMethodType.Before)
+```

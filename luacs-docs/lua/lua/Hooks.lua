@@ -43,12 +43,83 @@ function Hook.Call(eventName, parameters) end
 -- @tparam string methodName
 -- @tparam function callback
 -- @realm shared
--- @deprecated
+-- @deprecated Use `Hook.Patch` instead.
 -- @usage 
 -- Hook.HookMethod("Barotrauma.CharacterInfo", "IncreaseSkillLevel", function (instance, ptable)
 --    print(string.format("%s gained % xp", instance.Character.Name, ptable.increase))
 -- end, Hook.HookMethodType.After)
 function Hook.HookMethod(className, methodName, callback) end
+
+--- Attaches a prefix/postfix to a method. Used for modifying the behavior of methods.
+-- @tparam[opt] string identifier a string that identifies this patch (unique per patched method)
+-- @tparam string className the fully-qualified name of the type to patch
+-- @tparam string methodName the name of the method to patch
+-- @tparam[opt] {string} parameterTypes the type of the parameters -- used for disambiguating between overloads
+-- @tparam function callback function that is called before/after the patched method executes (see hookType parameter)
+-- @tparam[opt=Hook.HookMethodType.Before] Hook.HookMethodType hookType determines whether this patch is to be called before or after the original method executes. `Hook.HookMethodType.Before` is a prefix and `Hook.HookMethodType.After` is a postfix.
+-- @treturn string returns the identifier. If no identifier is supplied, a randomly generated one is returned instead.
+-- @see ParameterTable
+-- @realm shared
+-- @usage
+-- -- Postfix example: do some logging whenever CharacterInfo.IncreaseSkillLevel is called
+-- Hook.Patch("Barotrauma.CharacterInfo", "IncreaseSkillLevel", function(instance, ptable)
+--   print(string.format("%s gained % xp", instance.Character.Name, ptable["increase"]))
+-- end, Hook.HookMethodType.After)
+--
+-- -- More advanced example
+-- Hook.Patch(
+--   "Barotrauma.Character",
+--   "CanInteractWith",
+--   {
+--     "Barotrauma.Item",
+--      -- ref/out parameters are supported
+--      "out System.Single",
+--      "System.Boolean"
+--   },
+--   function(instance, ptable)
+--     -- This prevents the original method from executing, so we're
+--     -- effectively replacing the method entirely.
+--     ptable.PreventExecution = true
+--     -- Modify the `out System.Single` parameter
+--     ptable["distanceToItem"] = Single(50)
+--     -- This changes the return value to "null"
+--     return nil
+--   end, Hook.HookMethodType.Before)
+function Hook.Patch(identifier, className, methodName, parameterTypes, callback, hookType) end
+
+--- Removes a patch from a method.
+-- @tparam string identifier the identifier of the patch to remove
+-- @tparam string className the fully-qualified name of the type to unpatch
+-- @tparam string methodName the name of the method to unpatch
+-- @tparam[opt] {string} parameterTypes the type of the parameters -- used for disambiguating between overloads
+-- @tparam Hook.HookMethodType hookType the patch type
+-- @treturn boolean returns true if patch was successfully removed, otherwise false
+-- @realm shared
+-- @usage
+-- -- Unpatch a method using a known identifier
+-- Hook.Patch("mySuperCoolPatch", "Barotrauma.Character", "IsInteractable", function(instance, ptable)
+--   -- ...
+-- end, Hook.HookMethodType.After)
+-- local success = Hook.RemovePatch("mySuperCoolPatch", "Barotrauma.Character", "IsInteractable", Hook.HookMethodType.After)
+--
+-- -- Unpatch a method using a randomly generated identifier
+-- local patchId = Hook.Patch("Barotrauma.Character", "IsInteractable", function(instance, ptable)
+--   -- ...
+-- end, Hook.HookMethodType.After)
+-- local success = Hook.RemovePatch(patchId, "Barotrauma.Character", "IsInteractable", Hook.HookMethodType.After)
+function Hook.RemovePatch(identifier, className, methodName, parameterTypes, hookType) end
+
+--- A table of the parameters that a C# method was called with.
+--
+-- This is used in the `Hook.Patch` callback.
+--
+-- In order to access or modify parameters, you have to use the array accessor syntax, e.g. `ptable["myParam"]`
+-- @field PreventExecution if set to `true`, the original method and remaining postfix/prefixes will be skipped
+-- @field ReturnValue the return value of the C# method
+-- @field[readonly] OriginalParameters the parameters passed to the C# method, before any modifications by the patch(es)
+-- @field[readonly] OriginalReturnValue the return value of the C# method, before any modifications by the patch(es)
+-- @realm shared
+-- @table ParameterTable
 
 --- Hooks
 -- @summary
