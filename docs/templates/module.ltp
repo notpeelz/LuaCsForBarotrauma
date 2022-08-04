@@ -40,9 +40,14 @@
 	{% for item, _ in pairs(items) do %}
 		<section class="method" id="{{item.name}}">
 			<header>
-				<a class="anchor">
-					<h1>{* ldoc.realm_icon(item.tags.realm[1]) *}</span>{{ldoc.display_name(item)}}</h1>
-				</a>
+				{* ldoc.item_header(item) *}
+
+				{% if item.tags.deprecated then %}
+					<div class="notice warning">
+						<div class="title">Deprecated</div>
+						<p>This API is deprecated and shouldn&#x27;t be used anymore.</p>
+					</div>
+				{% end %}
 
 				{% if (item.tags.internal) then %}
 					<div class="notice error">

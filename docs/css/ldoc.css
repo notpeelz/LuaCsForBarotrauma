@@ -537,3 +537,7 @@ a.type {
 	background-color: inherit;
 	padding: 0 8px 0 8px;
 }
+
+.strikethrough {
+	text-decoration: line-through;
+}

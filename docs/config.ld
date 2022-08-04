@@ -34,6 +34,7 @@ pretty_topic_names = true -- strips extension from manual filenames, this does n
 
 custom_tags = {
   {"realm", hidden = true},
+  {"deprecated", hidden = true},
   {"internal", hidden = true}
 }
 

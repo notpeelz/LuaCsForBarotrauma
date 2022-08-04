@@ -59,14 +59,7 @@ end
 								{% for k, v in pairs(currentMod.items) do %}
 									{% if (v.kind == "functions") then %}
 										<li>
-											{* ldoc.realm_icon(v.tags.realm[1]) *}
-											<a href="{* ldoc.ref_to_module(currentMod) *}#{{v.name}}">
-												{% if (ldoc.is_kind_classmethod(currentMod.kind)) then
-													echo((v.name:gsub(".+:", "")))
-												else
-													echo((v.name:gsub(currentMod.name .. ".", "")))
-												end %}
-											</a>
+											{* ldoc.sidebar_item(v, currentMod) *}
 										</li>
 									{% end %}
 								{% end %}
@@ -90,14 +83,7 @@ end
 								{% for k, v in pairs(currentMod.items) do %}
 									{% if (v.kind == "fields" or v.kind == "tables") then %}
 										<li>
-											{* ldoc.realm_icon(v.tags.realm[1]) *}
-											<a href="{* ldoc.ref_to_module(currentMod) *}#{{v.name}}">
-												{% if (ldoc.is_kind_classmethod(currentMod.kind)) then
-													echo((v.name:gsub(".+:", "")))
-												else
-													echo((v.name:gsub(currentMod.name .. ".", "")))
-												end %}
-											</a>
+											{* ldoc.sidebar_item(v, currentMod) *}
 										</li>
 									{% end %}
 								{% end %}
