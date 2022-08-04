@@ -3,7 +3,7 @@
 --[[--
 Barotrauma Item class with some additional functions and fields
 
-Barotrauma source code: [Item.cs](https://github.com/evilfactory/Barotrauma-lua-attempt/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs)
+Barotrauma source code: [Item.cs](https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/Item.cs)
 ]]
 -- @code Item
 -- @pragma nostrip

@@ -3,7 +3,7 @@
 --[[--
 Barotrauma ItemPrefab class with some additional functions and fields
 
-Barotrauma source code: [ItemPrefab.cs](https://github.com/evilfactory/Barotrauma-lua-attempt/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/ItemPrefab.cs)
+Barotrauma source code: [ItemPrefab.cs](https://github.com/evilfactory/LuaCsForBarotrauma/blob/master/Barotrauma/BarotraumaShared/SharedSource/Items/ItemPrefab.cs)
 ]]
 -- @code ItemPrefab
 -- @pragma nostrip
