@@ -23,24 +23,30 @@
         {% if item.tags.deprecated then %}
           <div class="notice warning">
             <div class="title">Deprecated</div>
-            <p>This API is deprecated and shouldn't be used anymore.</p>
+            <div class="body">
+              <p>This API is deprecated and shouldn't be used anymore.</p>
+            </div>
           </div>
         {% end %}
 
         {% if (item.tags.internal) then %}
           <div class="notice error">
             <div class="title">Internal</div>
-            <p>This is an internal function! You are able to use it, but you risk unintended side effects if used incorrectly.</p>
+            <div class="body">
+              <p>This is an internal function! You are able to use it, but you risk unintended side effects if used incorrectly.</p>
+            </div>
           </div>
         {% end %}
 
         {% if (ldoc.descript(item):len() == 0) then %}
           <div class="notice warning">
             <div class="title">Incomplete</div>
-            <p>Documentation for this section is incomplete and needs expanding.</p>
+            <div class="body">
+              <p>Documentation for this section is incomplete and needs expanding.</p>
+            </div>
           </div>
         {% else %}
-          <p>{* ldoc.markup(ldoc.descript(item)) *}</p>
+          <p class="description">{* ldoc.markup(ldoc.descript(item)) *}</p>
         {% end %}
       </header>
 

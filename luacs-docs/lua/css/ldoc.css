@@ -349,17 +349,28 @@ article h1 {
 article h2 {
   font-size: 20px;
   font-weight: 600;
-  margin-top: 12px;
+  margin-top: calc(var(--padding-tiny) + 2px);
 }
 
 article h3 {
   color: var(--color-good);
-  margin-top: var(--padding-tiny);
+  margin-top: calc(var(--padding-tiny) + 2px);
   text-transform: uppercase;
 }
 
 article p {
+  line-height: calc(var(--font-normal) + 4px);
+}
+
+article p + p,
+article h2 + p,
+article pre + p {
   margin-top: var(--padding-small);
+}
+
+article h3 + p,
+article h4 + p {
+  margin-top: var(--padding-tiny);
 }
 
 article p a,
@@ -420,7 +431,7 @@ a.reference {
   letter-spacing: 2px;
 }
 
-.notice p {
+.notice .body {
   color: var(--color-notice-text);
 
   margin: 0 !important;
@@ -466,7 +477,7 @@ a.reference {
   font-size: 20px;
 }
 
-.method header p:first-of-type {
+.method header p.description:first-of-type {
   margin-top: var(--padding-tiny);
 }
 
