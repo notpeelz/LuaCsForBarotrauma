@@ -25,7 +25,7 @@ Game.ServerSettings = true
 Game.Settings = true
 
 --- ChatBox.
--- @realm ChatBox
+-- @realm server
 Game.ChatBox = true
 
 --- Send chat message to every client.
