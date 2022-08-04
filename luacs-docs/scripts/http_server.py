@@ -1,5 +1,6 @@
 import os
 import http.server
+from http.server import SimpleHTTPRequestHandler
 import argparse
 
 def Route(s):
@@ -14,9 +15,21 @@ parser.add_argument("root", type=str)
 parser.add_argument("--port", type=int, default=8000)
 parser.add_argument("--route", type=Route, dest="routes", action="extend", nargs="*")
 
-class RequestHandler(http.server.SimpleHTTPRequestHandler):
+class RequestHandler(SimpleHTTPRequestHandler):
     base_dir = None
     routes = []
+
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        SimpleHTTPRequestHandler.end_headers(self)
+
+    def do_GET(self):
+        if '?' in self.path:
+            self.path = self.path.split('?')[0]
+        SimpleHTTPRequestHandler.do_GET(self)
+
     def translate_path(self, path):
         path.lstrip()
         for prefix, rootDir in self.routes:
