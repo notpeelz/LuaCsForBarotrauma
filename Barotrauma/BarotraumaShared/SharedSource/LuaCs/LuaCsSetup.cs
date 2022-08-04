@@ -285,13 +285,13 @@ namespace Barotrauma
 			return lua.LoadFile(file, globalContext, codeStringFriendly);
 		}
 
-		public DynValue CallLuaFunction(object function, params object[] arguments)
+		public DynValue CallLuaFunction(object function, params object[] args)
 		{
 			lock (lua)
 			{
 				try
 				{
-					return lua.Call(function, arguments);
+					return lua.Call(function, args: args);
 				}
 				catch (Exception e)
 				{
@@ -376,7 +376,7 @@ namespace Barotrauma
 			LuaScriptLoader = new LuaScriptLoader();
 			LuaScriptLoader.ModulePaths = new string[] { };
 
-			LuaCustomConverters.RegisterAll();
+			LuaCustomConverters.Initialize(CallLuaFunction);
 
 			lua = new Script(CoreModules.Preset_SoftSandbox | CoreModules.Debug);
 			lua.Options.DebugPrint = PrintMessage;
