@@ -3,6 +3,26 @@
 local function isKindExpandable(kind)
   return kind ~= "Manual"
 end
+
+local function isSectionEmpty(mod, sections)
+  if type(sections) == "table" then
+    for _, v in pairs(mod.items) do
+      for _, section in pairs(sections) do
+        if v.section_id == section then
+          return false
+        end
+      end
+    end
+  else
+    local section = sections
+    for _, v in pairs(mod.items) do
+      if v.section_id == section then
+        return false
+      end
+    end
+  end
+  return true
+end
 %}
 
 <nav>
@@ -40,48 +60,42 @@ end
                   end)
                 end %}
 
-                {%
-                  local isThereFunctions = false
-                  for k, v in pairs(currentMod.items) do
-                     if (v.kind == "functions") then
-                       isThereFunctions = true
-                      break
-                    end
-                  end
-                %}
-
-                {% if isThereFunctions then %}
+                {% if not isSectionEmpty(currentMod, "function") then %}
                 <li>
                   <label class="colorful-label">FUNCTIONS</label>
                 </li>
                 {% end %}
 
                 {% for k, v in pairs(currentMod.items) do %}
-                  {% if (v.kind == "functions") then %}
+                  {% if (v.section_id == "function") then %}
                     <li>
                       {* ldoc.sidebar_item(v, currentMod) *}
                     </li>
                   {% end %}
                 {% end %}
 
-                {%
-                  local isThereFields = false
-                  for k, v in pairs(currentMod.items) do
-                     if (v.kind == "fields" or v.kind == "tables") then
-                      isThereFields = true
-                      break
-                    end
-                  end
-                %}
-
-                {% if isThereFields then %}
+                {% if not isSectionEmpty(currentMod, {"field", "table"}) then %}
                 <li>
                   <label class="colorful-label">FIELDS</label>
                 </li>
                 {% end %}
 
                 {% for k, v in pairs(currentMod.items) do %}
-                  {% if (v.kind == "fields" or v.kind == "tables") then %}
+                  {% if (v.section_id == "field" or v.section_id == "table") then %}
+                    <li>
+                      {* ldoc.sidebar_item(v, currentMod) *}
+                    </li>
+                  {% end %}
+                {% end %}
+
+                {% if not isSectionEmpty(currentMod, "hook") then %}
+                <li>
+                  <label class="colorful-label">HOOKS</label>
+                </li>
+                {% end %}
+
+                {% for k, v in pairs(currentMod.items) do %}
+                  {% if (v.section_id == "hook") then %}
                     <li>
                       {* ldoc.sidebar_item(v, currentMod) *}
                     </li>

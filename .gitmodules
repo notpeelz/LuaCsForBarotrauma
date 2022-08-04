@@ -3,4 +3,4 @@
 	url = https://github.com/evilfactory/moonsharp.git
 [submodule "luacs-docs/lua/libs/ldoc"]
 	path = luacs-docs/lua/libs/ldoc
-	url = https://github.com/impulsh/LDoc.git
+	url = https://github.com/evilfactory/LDoc.git

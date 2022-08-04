@@ -300,6 +300,35 @@ article header.module a {
   text-decoration: underline;
 }
 
+article header.section {
+  color: rgb(255, 255, 255);
+  background-color: var(--color-accent);
+  padding: var(--padding-tiny);
+  margin-top: var(--padding-small);
+  margin-bottom: 0;
+}
+
+article header.section h1 {
+  padding: 0;
+  border: 0;
+  font-size: var(--font-big);
+  font-weight: 100;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+article header.section h2 {
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-normal);
+  font-weight: normal;
+}
+
+article header.section .section-separator {
+  margin: var(--padding-tiny) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+}
+
 details.category > summary {
   list-style: none;
 }
