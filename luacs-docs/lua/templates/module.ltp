@@ -25,6 +25,11 @@
             <div class="title">Deprecated</div>
             <div class="body">
               <p>This API is deprecated and shouldn't be used anymore.</p>
+              {% for _, m in ipairs(item.tags.deprecated) do %}
+                {% if m ~= "" then %}
+                <p>{* ldoc.markup(m) *}</p>
+                {% end %}
+              {% end %}
             </div>
           </div>
         {% end %}
