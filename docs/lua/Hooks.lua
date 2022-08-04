@@ -43,6 +43,7 @@ function Hook.Call(eventName, parameters) end
 -- @tparam string methodName
 -- @tparam function callback
 -- @realm shared
+-- @deprecated
 -- @usage 
 -- Hook.HookMethod("Barotrauma.CharacterInfo", "IncreaseSkillLevel", function (instance, ptable)
 --    print(string.format("%s gained % xp", instance.Character.Name, ptable.increase))
