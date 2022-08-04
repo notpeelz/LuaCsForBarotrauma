@@ -20,17 +20,17 @@ end
 function ldoc.sidebar_item(item, module)
   local text = ""
 
+  text = text .. ldoc.realm_icon(item.tags.realm[1])
+  text = text .. "<a href=\""
+    .. ldoc.ref_to_module(module) .. "#" .. item.name
+    .. "\">"
+
   local deprecated = item.tags.deprecated
   if deprecated then
     text = text .. "<span class=\"strikethrough\">"
   else
     text = text .. "<span>"
   end
-
-  text = text .. ldoc.realm_icon(item.tags.realm[1])
-  text = text .. "<a href=\""
-    .. ldoc.ref_to_module(module) .. "#" .. item.name
-    .. "\">"
 
   if ldoc.is_kind_classmethod(module.kind) then
     text = text .. item.name:gsub(".+:", "")
@@ -39,8 +39,8 @@ function ldoc.sidebar_item(item, module)
   end
 
   text = text
-    .. "</a>"
     .. "</span>"
+    .. "</a>"
   return text
 end
 
