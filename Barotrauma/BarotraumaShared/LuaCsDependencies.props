@@ -1,0 +1,8 @@
+<Project>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.1.0" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
+    <PackageReference Include="Sigil" Version="5.0.0" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Libraries\moonsharp\src\MoonSharp.Interpreter\_Projects\MoonSharp.Interpreter.netcore\MoonSharp.Interpreter.netcore.csproj" />
+  </ItemGroup>
+</Project>
