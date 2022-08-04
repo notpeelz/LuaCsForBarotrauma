@@ -135,14 +135,14 @@ namespace Barotrauma
 				{
 					if (patches == null || patches.Prefixes == null || patches.Prefixes.Find(patch => patch.PatchMethod == _miHookLuaCsPatchRetPrefix) == null)
 					{
-						harmony.Patch(method, prefix: new HarmonyMethod(_miHookLuaCsPatchRetPrefix));
+						Harmony.Patch(method, prefix: new HarmonyMethod(_miHookLuaCsPatchRetPrefix));
 					}
 				}
 				else
 				{
 					if (patches == null || patches.Prefixes == null || patches.Prefixes.Find(patch => patch.PatchMethod == _miHookLuaCsPatchPrefix) == null)
 					{
-						harmony.Patch(method, prefix: new HarmonyMethod(_miHookLuaCsPatchPrefix));
+						Harmony.Patch(method, prefix: new HarmonyMethod(_miHookLuaCsPatchPrefix));
 					}
 				}
 
@@ -167,14 +167,14 @@ namespace Barotrauma
 				{
 					if (patches == null || patches.Postfixes == null || patches.Postfixes.Find(patch => patch.PatchMethod == _miHookLuaCsPatchRetPostfix) == null)
 					{
-						harmony.Patch(method, postfix: new HarmonyMethod(_miHookLuaCsPatchRetPostfix));
+						Harmony.Patch(method, postfix: new HarmonyMethod(_miHookLuaCsPatchRetPostfix));
 					}
 				}
 				else
 				{
 					if (patches == null || patches.Postfixes == null || patches.Postfixes.Find(patch => patch.PatchMethod == _miHookLuaCsPatchPostfix) == null)
 					{
-						harmony.Patch(method, postfix: new HarmonyMethod(_miHookLuaCsPatchPostfix));
+						Harmony.Patch(method, postfix: new HarmonyMethod(_miHookLuaCsPatchPostfix));
 					}
 				}
 
