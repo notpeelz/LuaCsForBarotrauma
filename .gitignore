@@ -51,7 +51,6 @@ desktop.ini
 # Merge script
 temp.txt
 
-docs/html
 # Private assets
 Barotrauma/BarotraumaShared/Content/*
 Barotrauma/**/GameAnalyticsKeys.cs

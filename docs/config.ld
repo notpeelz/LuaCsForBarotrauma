@@ -1,24 +1,26 @@
+-- vim:ft=lua
 
 file = {
-	"docs/lua"
+  "lua"
 }
 
-module_file = {
+module_file = {}
 
-}
-
-dir = "docs/html"
+dir = "html"
 project = "LuaForBarotrauma"
 title = "LuaForBarotrauma Documentation"
 
 no_space_before_args = true
-style = "docs/css"
-template = "docs/templates"
+style = "css"
+template = "templates"
 format = "markdown"
 ignore = true
-topics = "docs/manual"
+topics = "manual"
 use_markdown_titles = true
-kind_names = {topic = "Manual", module = "Classes"}
+kind_names = {
+  topic = "Manual",
+  module = "Classes"
+}
 merge = true
 sort = true
 sort_modules = true
@@ -31,20 +33,20 @@ pretty_urls = true -- avoid showing .html in urls
 pretty_topic_names = true -- strips extension from manual filenames, this does not check filename collisions
 
 custom_tags = {
-	{"realm", hidden = true},
-	{"internal", hidden = true}
+  {"realm", hidden = true},
+  {"internal", hidden = true}
 }
 
 custom_display_name_handler = function(item, default_handler)
-	if (item.type == "function" and item.module) then
-		if (item.module.type == "classmod" or item.module.type == "panel") then
-			return item.module.mod_name .. ":" .. default_handler(item)
-		elseif (item.module.type == "hooks") then
-			return item.module.mod_name:upper() .. ":" .. default_handler(item)
-		end
-	end
+  if (item.type == "function" and item.module) then
+    if (item.module.type == "classmod" or item.module.type == "panel") then
+      return item.module.mod_name .. ":" .. default_handler(item)
+    elseif (item.module.type == "hooks") then
+      return item.module.mod_name:upper() .. ":" .. default_handler(item)
+    end
+  end
 
-	return default_handler(item)
+  return default_handler(item)
 end
 
 new_type("code", "Code", true)

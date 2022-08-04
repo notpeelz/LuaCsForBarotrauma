@@ -1,3 +1,6 @@
 [submodule "Libraries/moonsharp"]
 	path = Libraries/moonsharp
 	url = https://github.com/evilfactory/moonsharp.git
+[submodule "docs/libs/ldoc"]
+	path = docs/libs/ldoc
+	url = https://github.com/impulsh/LDoc.git
