@@ -76,7 +76,7 @@
                 <span class="tag parameter">{{displayName}}</span>
 
                 {% if (type ~= "") then %}
-                  <span class="tag">{* type *}</span>
+                  <span class="tag type">{* type *}</span>
                 {% end %}
 
                 {% if (default and default ~= true) then %}
@@ -104,11 +104,13 @@
               {% type = ldoc.typename(type) %}
 
               <li>
-                {% if (type ~= "") then %}
+                <span class="tag type">
+                  {% if (type ~= "") then %}
                   {* type *}
-                {% else -- we'll assume that it will return a variable type if none is set %}
-                  <span class="tag type">any</span>
-                {% end %}
+                  {% else -- we'll assume that it will return a variable type if none is set %}
+                  any
+                  {% end %}
+                </span>
 
                 <p>{* ldoc.markup(returnValue.text) *}</p>
               </li>
