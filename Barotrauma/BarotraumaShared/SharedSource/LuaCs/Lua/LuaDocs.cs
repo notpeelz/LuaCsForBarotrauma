@@ -284,7 +284,7 @@ local {type.Name} = {EMPTY_TABLE}";
 					lsb.Append(name);
 					lsb.Append($", Field of type {returnName}\n");
 					lsb.Append($"-- @realm shared\n");
-					lsb.Append($"-- @{returnName} {name}\n");
+					lsb.Append($"-- @field {name}\n");
 
 					lsb.Append("\n");
 					sb.Append(lsb);
@@ -312,7 +312,7 @@ local {type.Name} = {EMPTY_TABLE}";
 					lsb.Append(name);
 					lsb.Append($", Field of type {returnName}\n");
 					lsb.Append($"-- @realm shared\n");
-					lsb.Append($"-- @{returnName} {name}\n");
+					lsb.Append($"-- @field {name}\n");
 
 					lsb.Append("\n");
 					sb.Append(lsb);

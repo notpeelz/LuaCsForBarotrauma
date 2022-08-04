@@ -74,14 +74,28 @@ end
                   {% end %}
                 {% end %}
 
-                {% if not isSectionEmpty(currentMod, {"field", "table"}) then %}
+                {% if not isSectionEmpty(currentMod, "table") then %}
+                <li>
+                  <label class="colorful-label">TABLES</label>
+                </li>
+                {% end %}
+
+                {% for k, v in pairs(currentMod.items) do %}
+                  {% if (v.section_id == "table") then %}
+                    <li>
+                      {* ldoc.sidebar_item(v, currentMod) *}
+                    </li>
+                  {% end %}
+                {% end %}
+
+                {% if not isSectionEmpty(currentMod, "field") then %}
                 <li>
                   <label class="colorful-label">FIELDS</label>
                 </li>
                 {% end %}
 
                 {% for k, v in pairs(currentMod.items) do %}
-                  {% if (v.section_id == "field" or v.section_id == "table") then %}
+                  {% if (v.section_id == "field") then %}
                     <li>
                       {* ldoc.sidebar_item(v, currentMod) *}
                     </li>
