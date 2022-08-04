@@ -544,6 +544,9 @@ a.reference {
   background-color: rgb(115, 53, 142);
 }
 
+.tag.readonly {
+  background-color: rgb(47, 100, 74);
+}
 
 .tag.type {
   background-color: rgb(31, 141, 155);

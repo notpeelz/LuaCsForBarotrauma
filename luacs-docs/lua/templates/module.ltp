@@ -71,6 +71,7 @@
               {% local displayName = item:display_name_of(argumentName) %}
               {% local type = ldoc.typename(item:type_of_param(argumentName)) %}
               {% local default = item:default_of_param(argumentName) %}
+              {% local readonly = item:readonly(argumentName) %}
 
               <li>
                 <span class="tag parameter">{{displayName}}</span>
@@ -83,6 +84,10 @@
                   <span class="tag default">default: {{default}}</span>
                 {% elseif (default) then %}
                   <span class="tag default">optional</span>
+                {% end %}
+
+                {% if (readonly) then %}
+                  <span class="tag readonly">read-only</span>
                 {% end %}
 
                 <p>{* ldoc.markup(item.params.map[argumentName]) *}</p>
