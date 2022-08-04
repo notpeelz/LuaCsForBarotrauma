@@ -23,13 +23,22 @@ function ldoc.asset_url(path)
 end
 
 function ldoc.realm_icon(realm)
+  assert(
+    realm == "server" or realm == "client" or realm == "shared",
+    string.format("WARNING: invalid realm '%s'", realm))
   return "<span class=\"realm " .. (realm or "") .. "\"></span>"
+end
+
+function ldoc.realm_icon_from_item(item)
+  local realm = item.tags.realm
+  assert(type(realm) == "table" and #realm > 0, "missing @realm tag")
+  return ldoc.realm_icon(realm[1])
 end
 
 function ldoc.sidebar_item(item, module)
   local text = ""
 
-  text = text .. ldoc.realm_icon(item.tags.realm[1])
+  text = text .. ldoc.realm_icon_from_item(item)
   text = text .. "<a href=\""
     .. ldoc.ref_to_module(module) .. "#" .. item.name
     .. "\">"
@@ -66,7 +75,7 @@ function ldoc.item_header(item)
   end
 
   text = text
-    .. ldoc.realm_icon(item.tags.realm[1])
+    .. ldoc.realm_icon_from_item(item)
     .. ldoc.display_name(item)
     .. "</h1>"
     .. "</a>"
