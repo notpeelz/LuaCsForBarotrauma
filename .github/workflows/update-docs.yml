@@ -21,6 +21,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: |
+            3.1.x
+            6.0.x
+
       - uses: leafo/gh-actions-lua@v8
         with:
           luaVersion: "5.2"
@@ -30,6 +37,10 @@ jobs:
       - name: Run install script
         working-directory: ${{ env.DOCS_LUA_ROOT }}
         run: ./scripts/install.sh
+
+      - name: Run docs generator script
+        working-directory: ${{ env.DOCS_LUA_ROOT }}
+        run: ./scripts/generate_docs.sh
 
       - name: Run build script
         working-directory: ${{ env.DOCS_LUA_ROOT }}
