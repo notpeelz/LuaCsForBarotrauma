@@ -1,0 +1,114 @@
+name: Update documentation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-docs-lua:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: leafo/gh-actions-lua@v8
+        with:
+          luaVersion: "5.2"
+
+      - uses: leafo/gh-actions-luarocks@v4
+
+      - name: Run install script
+        working-directory: docs
+        run: ./scripts/install.sh
+
+      - name: Run build script
+        working-directory: docs
+        run: ./scripts/build.sh
+
+      - name: Create tarball
+        working-directory: docs/html
+        run: tar -czf ../../docs-lua.tar.gz .
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs-lua
+          path: docs-lua.tar.gz
+
+  update-docs-cs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Create directories
+        run: |
+          mkdir -p doxygen/build/baro-server
+          mkdir -p doxygen/build/baro-client
+
+      - name: Build server documentation
+        uses: mattnotmitt/doxygen-action@v1
+        with:
+          working-directory: 'doxygen/baro-server'
+          doxyfile-path: './Doxyfile'
+
+      - name: Build client documentation
+        uses: mattnotmitt/doxygen-action@v1
+        with:
+          working-directory: 'doxygen/baro-client'
+          doxyfile-path: './Doxyfile'
+
+      - name: Build containing documentation
+        uses: mattnotmitt/doxygen-action@v1
+        with:
+          working-directory: 'doxygen/'
+          doxyfile-path: './Doxyfile'
+
+      - name: Create tarball
+        working-directory: doxygen/build
+        run: tar -czf ../../docs-cs.tar.gz .
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs-cs
+          path: docs-cs.tar.gz
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: [update-docs-lua, update-docs-cs]
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - run: mkdir -p docs_deploy
+
+      - name: "Download build artifacts: lua docs"
+        uses: actions/download-artifact@v3
+        with:
+          name: docs-lua
+          path: docs_deploy
+
+      - name: "Download build artifacts: cs docs"
+        uses: actions/download-artifact@v3
+        with:
+          name: docs-cs
+          path: docs_deploy
+
+      - name: Copy landing page files
+        run: cp -r docs-landing-page/. docs_deploy/public
+
+      - name: Extract lua and cs tarballs
+        working-directory: docs_deploy
+        run: |
+          mkdir -p public/lua-docs public/cs-docs
+          tar -xzf docs-lua.tar.gz -C public/lua-docs
+          tar -xzf docs-cs.tar.gz -C public/cs-docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs_deploy/public
+          keep_files: true
