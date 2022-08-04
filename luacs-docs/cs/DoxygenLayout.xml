@@ -1,0 +1,8 @@
+<doxygenlayout version="1.0">
+  <navindex>
+    <tab type="user" url="./index.html" title="Documentation introduction"/>
+    <tab type="user" url="../baro-server/html/index.html" title="Server class documentation"/>
+    <tab type="user" url="../baro-client/html/index.html" title="Client class documentation"/>
+    <tab type="mainpage" visible="yes" title=""/>
+  </navindex>
+</doxygenlayout>
