@@ -17,7 +17,9 @@
   --font-style-normal: Segoe UI, Helvetica, Arial, sans-serif;
   --font-style-code: Consolas, monospace;
 
-  --color-accent: rgb(47, 100, 74);
+  --color-accent-1: rgb(47, 100, 74);
+  --color-accent-2: rgb(150, 206, 179);
+  --color-accent-3: rgb(104, 211, 225);
   --color-accent-dark: rgb(33, 33, 33);
   --color-white: rgb(255, 255, 255);
   --color-offwhite: rgb(200, 200, 200);
@@ -25,8 +27,8 @@
   --color-black: rgb(0, 0, 0);
   --color-lightgrey: rgb(160, 160, 160);
   --color-background-light: rgb(245, 245, 245);
-  --color-background-dark: rgb(33, 33, 33);
-  --color-background-dark-ish: rgb(44, 44, 44);
+  --color-background-dark: rgb(30, 30, 30);
+  --color-background-dark-ish: rgb(33, 36, 37);
   --color-outline: rgb(149, 34, 160);
   --color-good: #5190ff;
 }
@@ -60,7 +62,7 @@ ul li {
 
 /* landing */
 .landing {
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
   color: var(--color-white);
 
   padding: 128px 0 128px 0;
@@ -134,7 +136,7 @@ span.realm.server {
 
 
 .colorful-label {
-  color: rgb(31, 141, 155);
+  color: var(--color-accent-3);
 }
 
 /* wrapper element for sidebar/content */
@@ -164,7 +166,7 @@ nav {
 /* sidebar header */
 nav header {
   color: var(--color-white);
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
 
   padding: var(--padding-small);
 }
@@ -251,7 +253,7 @@ nav section details.category summary::-webkit-details-marker {
 }
 
 nav section details.category summary h2 {
-  color: var(--color-accent);
+  color: var(--color-accent-2);
 
   font-size: var(--font-big);
   letter-spacing: 2px;
@@ -277,7 +279,7 @@ article .wrapper > *:first-child {
 /* header */
 article header {
   color: rgb(255, 255, 255);
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
   padding: var(--padding-tiny);
 }
 
@@ -302,7 +304,7 @@ article header.module a {
 
 article header.section {
   color: rgb(255, 255, 255);
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
   padding: var(--padding-tiny);
   margin-top: var(--padding-small);
   margin-bottom: 0;
@@ -353,7 +355,7 @@ article h2 {
 }
 
 article h3 {
-  color: var(--color-good);
+  color: var(--color-accent-3);
   margin-top: calc(var(--padding-tiny) + 2px);
   text-transform: uppercase;
 }
@@ -383,7 +385,7 @@ article h2 a {
 
 article h1.title {
   color: rgb(255, 255, 255);
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
   margin-top: var(--padding-small);
   margin-bottom: 0;
   padding: var(--padding-tiny);
@@ -404,7 +406,7 @@ a.reference {
 }
 
 .notice {
-  --color-notice-background: var(--color-accent);
+  --color-notice-background: var(--color-accent-1);
   --color-notice-text: var(--color-notice-background);
 
   margin-top: var(--padding-tiny);
@@ -416,8 +418,8 @@ a.reference {
 }
 
 .notice.warning {
-  --color-notice-background: rgb(224, 169, 112);
-  --color-notice-text: rgb(167, 104, 37);
+  --color-notice-background: rgb(128, 79, 28);
+  --color-notice-text: rgb(220, 160, 96);
 }
 
 .notice .title {
@@ -463,17 +465,17 @@ a.reference {
 
   outline: solid;
   outline-width: 1px;
-  outline-color: var(--color-accent);
+  outline-color: var(--color-accent-1);
 }
 
 .method header:target {
-  background-color: var(--color-accent);
+  background-color: var(--color-accent-1);
 }
 
 .method header h1 {
   font-family: "Source Code Pro", monospace;
   padding-bottom: var(--padding-tiny);
-  border-bottom: 1px solid var(--color-accent);
+  border-bottom: 1px solid var(--color-accent-1);
   font-size: 20px;
 }
 
@@ -482,7 +484,7 @@ a.reference {
 }
 
 .method h3 {
-  color: var(--color-good);
+  color: var(--color-accent-3);
   font-size: var(--font-normal);
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -525,12 +527,11 @@ a.reference {
 }
 
 .method ul li a {
-  color: rgb(115, 53, 142);
+  color: rgb(178, 118, 204);
   font-weight: 600;
 }
 
-/* we have to manually specify these instead of making a shared class since you cannot customize the parameter class in ldoc */
-.parameter, .type, .default {
+.tag {
   display: inline-block;
   color: rgb(255, 255, 255) !important;
 
@@ -539,24 +540,26 @@ a.reference {
   font-family: "Source Code Pro", monospace;
 }
 
-.parameter {
+.tag.parameter {
   background-color: rgb(115, 53, 142);
 }
 
-.type {
+
+.tag.type {
   background-color: rgb(31, 141, 155);
 }
 
-a.type {
-  font-weight: 300 !important;
+.tag.type a {
+  color: inherit;
+  font-weight: 300;
   text-decoration: underline;
 }
 
-.default {
+.tag.default {
   background-color: rgb(193, 114, 11);
 }
 
-.type a {
+.tag.type a {
   padding: 0;
 }
 
