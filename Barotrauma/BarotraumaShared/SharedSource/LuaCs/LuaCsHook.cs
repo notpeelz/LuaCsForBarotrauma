@@ -540,6 +540,8 @@ namespace Barotrauma
 
         private readonly Dictionary<MethodKey, PatchedMethod> registeredPatches = new Dictionary<MethodKey, PatchedMethod>();
 
+        private static LuaCsSetup LuaCs;
+
         private static LuaCsHook instance;
 
         private struct MethodKey : IEquatable<MethodKey>
@@ -580,9 +582,10 @@ namespace Barotrauma
             };
         }
 
-        public LuaCsHook()
+        internal LuaCsHook(LuaCsSetup luaCs)
         {
             instance = this;
+            LuaCs = luaCs;
         }
 
         public void Initialize()
@@ -736,7 +739,6 @@ namespace Barotrauma
         [MoonSharpHidden]
         public T Call<T>(string name, params object[] args)
         {
-            if (GameMain.LuaCs == null) throw new InvalidOperationException("Can't call hooks before LuaCsHook is initialized.");
             if (name == null) throw new ArgumentNullException(name);
             if (args == null) args = new object[0];
 
@@ -756,7 +758,7 @@ namespace Barotrauma
 
                 try
                 {
-                    if (GameMain.LuaCs.PerformanceCounter.EnablePerformanceCounter)
+                    if (LuaCs.PerformanceCounter.EnablePerformanceCounter)
                     {
                         performanceMeasurement.Start();
                     }
@@ -768,10 +770,10 @@ namespace Barotrauma
                         lastResult = result.ToObject<T>();
                     }
 
-                    if (GameMain.LuaCs.PerformanceCounter.EnablePerformanceCounter)
+                    if (LuaCs.PerformanceCounter.EnablePerformanceCounter)
                     {
                         performanceMeasurement.Stop();
-                        GameMain.LuaCs.PerformanceCounter.SetHookElapsedTicks(name, key, performanceMeasurement.ElapsedTicks);
+                        LuaCs.PerformanceCounter.SetHookElapsedTicks(name, key, performanceMeasurement.ElapsedTicks);
                         performanceMeasurement.Reset();
                     }
                 }
@@ -1093,9 +1095,9 @@ namespace Barotrauma
             var exception = il.DeclareLocal<Exception>("exception");
             il.StoreLocal(exception);
 
-            // IL: var luaCsSetup = GameMain.LuaCs;
+            // IL: var luaCsSetup = LuaCsHook.luaCs;
             var luaCsSetup = il.DeclareLocal<LuaCsSetup>("luaCsSetup");
-            il.LoadField(typeof(GameMain).GetField(nameof(GameMain.LuaCs), BindingFlags.Public | BindingFlags.Static));
+            il.LoadField(typeof(LuaCsHook).GetField(nameof(LuaCsHook.LuaCs), BindingFlags.NonPublic | BindingFlags.Static));
             il.StoreLocal(luaCsSetup);
 
             // IL: luaCsSetup.HandleException(exception, "", ExceptionType.Lua);

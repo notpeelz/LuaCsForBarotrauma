@@ -77,7 +77,7 @@ namespace Barotrauma
 
 		public LuaCsSetup()
 		{
-			Hook = new LuaCsHook();
+			Hook = new LuaCsHook(this);
 			ModStore = new LuaCsModStore();
 
 			Game = new LuaGame();
