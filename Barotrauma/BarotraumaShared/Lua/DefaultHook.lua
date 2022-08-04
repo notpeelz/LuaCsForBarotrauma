@@ -8,7 +8,7 @@ Hook.Patch(
     "System.Boolean"
   },
   function(instance, p)
-    if Hook.Call("item.interact", instance, p["picker"], p["ignoreRequiredItems"], p["forceSelectKey"], p["forceActionKey"]) == true then
+    if Hook.Call("item.interact", instance, p["user"], p["ignoreRequiredItems"], p["forceSelectKey"], p["forceUseKey"]) == true then
       p.PreventExecution = true
       return false
     end
