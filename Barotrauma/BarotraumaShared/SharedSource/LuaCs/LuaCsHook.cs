@@ -738,14 +738,14 @@ namespace Barotrauma
 
         public void Clear()
         {
+            Harmony?.UnpatchAll();
+
             hookFunctions.Clear();
             registeredPatches.Clear();
             patchModuleBuilder = null;
 
             compatHookPrefixMethods.Clear();
             compatHookPostfixMethods.Clear();
-
-            Harmony?.UnpatchAll();
         }
 
         public void Update() { }
