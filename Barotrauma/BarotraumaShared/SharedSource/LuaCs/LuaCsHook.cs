@@ -73,7 +73,14 @@ namespace Barotrauma
             if (type.IsByRef)
             {
                 type = type.GetElementType();
-                il.LoadIndirect(type);
+                if (type.IsValueType)
+                {
+                    il.LoadObject(type);
+                }
+                else
+                {
+                    il.LoadIndirect(type);
+                }
             }
         }
 
@@ -88,7 +95,14 @@ namespace Barotrauma
             if (type.IsByRef)
             {
                 type = type.GetElementType();
-                il.LoadIndirect(type);
+                if (type.IsValueType)
+                {
+                    il.LoadObject(type);
+                }
+                else
+                {
+                    il.LoadIndirect(type);
+                }
             }
         }
 
@@ -1073,12 +1087,9 @@ namespace Barotrauma
                     // IL: ref argName = modifiedValue;
                     il.LoadArgument(i);
                     il.LoadLocalAndCast(modifiedValue, paramType);
-                    if (paramType == typeof(bool))
+                    if (paramType.IsValueType)
                     {
-                        // XXX: for some reason Sigil doesn't like
-                        // `StoreIndirect(typeof(bool))` and suggests using
-                        // `StoreObject()` instead.
-                        il.StoreObject<bool>();
+                        il.StoreObject(paramType);
                     }
                     else
                     {
