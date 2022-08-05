@@ -13,6 +13,7 @@
 - **DedicatedServer.dll**
 - **DedicatedServer.pdb**
 - **0Harmony.dll**
+- **Sigil.dll**
 - **MoonSharp.Interpreter.dll**
 - **MonoMod.Common.dll**
 - **Mono.Cecil.dll**

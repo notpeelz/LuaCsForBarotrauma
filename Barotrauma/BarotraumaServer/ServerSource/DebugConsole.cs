@@ -1284,6 +1284,7 @@ namespace Barotrauma
                     {
                         "Barotrauma.dll", "Barotrauma.deps.json",
                         "0harmony.dll", "Mono.Cecil.dll",
+                        "Sigil.dll",
                         "Mono.Cecil.Mdb.dll", "Mono.Cecil.Pdb.dll",
                         "Mono.Cecil.Rocks.dll", "MonoMod.Common.dll",
                         "MoonSharp.Interpreter.dll",
