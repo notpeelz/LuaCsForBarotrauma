@@ -677,7 +677,7 @@ namespace Barotrauma
 
             var type = typeBuilder.CreateTypeInfo().AsType();
 
-            // The assembly names are harcoded, otherwise it would
+            // The assembly names are hardcoded, otherwise it would
             // break unit tests.
             var assembliesToExpose = new[] { "Barotrauma", "DedicatedServer" };
             foreach (var name in assembliesToExpose)
