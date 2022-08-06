@@ -1,4 +1,5 @@
 ﻿using Barotrauma;
+using Microsoft.Xna.Framework;
 using MoonSharp.Interpreter;
 using System;
 using System.Diagnostics;
@@ -23,6 +24,8 @@ namespace TestProject.LuaCs
             UserData.RegisterType<PatchTarget2>();
             UserData.RegisterType<PatchTarget3>();
             UserData.RegisterType<PatchTarget4>();
+            UserData.RegisterType<PatchTarget5>();
+            UserData.RegisterType<PatchTarget6>();
 
             luaCs.Initialize();
             luaCs.Lua.Globals["TestValueType"] = UserData.CreateStatic<TestValueType>();
@@ -309,6 +312,51 @@ namespace TestProject.LuaCs
             target.Run(5, out var outString, ref refByte, "foo");
             Assert.True(target.ran);
             Assert.Equal("100abc4", outString);
+        }
+
+        public class PatchTarget5
+        {
+            public bool ran;
+
+            public string Run(Vector2 vec)
+            {
+                ran = true;
+                return vec.ToString();
+            }
+        }
+
+        [Fact]
+        public void TestParameterValueType()
+        {
+            var target = new PatchTarget5();
+            AddPrefix<PatchTarget5>("patchRan = true");
+            var returnValue = target.Run(new Vector2(1, 2));
+            Assert.True(target.ran);
+            Assert.True(luaCs.Lua.Globals["patchRan"] as bool?);
+            Assert.Equal("{X:1 Y:2}", returnValue);
+        }
+
+        public class PatchTarget6
+        {
+            public bool ran;
+
+            public byte Run(byte b)
+            {
+                ran = true;
+                return b;
+            }
+        }
+
+        [Fact]
+        public void TestCastWithImplicitOperator()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['b'] = Byte(6)
+            ");
+            var returnValue = target.Run(5);
+            Assert.True(target.ran);
+            Assert.Equal(6, returnValue);
         }
     }
 }
