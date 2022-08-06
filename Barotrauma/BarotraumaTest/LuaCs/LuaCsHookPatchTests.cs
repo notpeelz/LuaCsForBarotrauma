@@ -340,23 +340,185 @@ namespace TestProject.LuaCs
         {
             public bool ran;
 
-            public byte Run(byte b)
+            public sbyte RunSByte(sbyte v)
             {
                 ran = true;
-                return b;
+                return v;
+            }
+
+            public byte RunByte(byte v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public short RunInt16(short v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public ushort RunUInt16(ushort v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public int RunInt32(int v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public uint RunUInt32(uint v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public long RunInt64(long v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public ulong RunUInt64(ulong v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public float RunSingle(float v)
+            {
+                ran = true;
+                return v;
+            }
+
+            public double RunDouble(double v)
+            {
+                ran = true;
+                return v;
             }
         }
 
         [Fact]
-        public void TestCastWithImplicitOperator()
+        public void TestCastPrimitiveWrapperSByte()
         {
             var target = new PatchTarget6();
             AddPrefix<PatchTarget6>(@"
-                ptable['b'] = Byte(6)
-            ");
-            var returnValue = target.Run(5);
+                ptable['v'] = SByte(-6)
+            ", testMethod: nameof(PatchTarget6.RunSByte));
+            var returnValue = target.RunSByte(-5);
+            Assert.True(target.ran);
+            Assert.Equal(-6, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperByte()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Byte(6)
+            ", testMethod: nameof(PatchTarget6.RunByte));
+            var returnValue = target.RunByte(5);
             Assert.True(target.ran);
             Assert.Equal(6, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperInt16()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Int16(-25000)
+            ", testMethod: nameof(PatchTarget6.RunInt16));
+            var returnValue = target.RunInt16(30000);
+            Assert.True(target.ran);
+            Assert.Equal(-25000, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperUInt16()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = UInt16(60000)
+            ", testMethod: nameof(PatchTarget6.RunUInt16));
+            var returnValue = target.RunUInt16(50000);
+            Assert.True(target.ran);
+            Assert.Equal(60000, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperInt32()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Int32('7FFFFF00', 16)
+            ", testMethod: nameof(PatchTarget6.RunInt32));
+            var returnValue = target.RunInt32(900000);
+            Assert.True(target.ran);
+            Assert.Equal(0x7FFFFF00, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperUInt32()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = UInt32('AFFFFFFF', 16)
+            ", testMethod: nameof(PatchTarget6.RunUInt32));
+            var returnValue = target.RunUInt32(300500);
+            Assert.True(target.ran);
+            Assert.Equal(0xAFFFFFFF, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperInt64()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Int64('7555555555555555', 16)
+            ", testMethod: nameof(PatchTarget6.RunInt64));
+            var returnValue = target.RunInt64(0x7FFFFFFF00000000);
+            Assert.True(target.ran);
+            Assert.Equal(0x7555555555555555, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperUInt64()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = UInt64('F555555555555555', 16)
+            ", testMethod: nameof(PatchTarget6.RunUInt64));
+            var returnValue = target.RunUInt64(0xFFFFFFFF00000000);
+            Assert.True(target.ran);
+            Assert.Equal(0xF555555555555555, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperSingle()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Single(123.456)
+            ", testMethod: nameof(PatchTarget6.RunSingle));
+            var returnValue = target.RunSingle(111.111f);
+            Assert.True(target.ran);
+            Assert.Equal(123.456f, returnValue);
+        }
+
+        [Fact]
+        public void TestCastPrimitiveWrapperDouble()
+        {
+            var target = new PatchTarget6();
+            AddPrefix<PatchTarget6>(@"
+                ptable['v'] = Double(123.456)
+            ", testMethod: nameof(PatchTarget6.RunDouble));
+            var returnValue = target.RunDouble(111.111d);
+            Assert.True(target.ran);
+            Assert.Equal(123.456d, returnValue);
         }
     }
 }
