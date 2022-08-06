@@ -67,22 +67,7 @@ namespace Barotrauma
         /// </summary>
         /// <param name="il">The IL emitter.</param>
         /// <param name="type">The type to check if ByRef.</param>
-        public static void DerefIfByRef(this Emit il, Type type)
-        {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-            if (type.IsByRef)
-            {
-                type = type.GetElementType();
-                if (type.IsValueType)
-                {
-                    il.LoadObject(type);
-                }
-                else
-                {
-                    il.LoadIndirect(type);
-                }
-            }
-        }
+        public static void DerefIfByRef(this Emit il, Type type) => il.DerefIfByRef(ref type);
 
         /// <summary>
         /// Deferences the value on stack if the provided type is ByRef.
