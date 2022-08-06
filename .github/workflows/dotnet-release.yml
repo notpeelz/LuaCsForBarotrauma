@@ -48,7 +48,7 @@ jobs:
       with:
         type: zip
         filename: barotrauma_lua_windows.zip
-        directory: 'Barotrauma/bin/ReleaseWindows/netcoreapp3.1/win-x64/publish'
+        directory: Barotrauma/bin/ReleaseWindows/netcoreapp3.1/win-x64/publish
 
     - name: Archive Linux Release
       uses: thedoctor0/zip-release@main
