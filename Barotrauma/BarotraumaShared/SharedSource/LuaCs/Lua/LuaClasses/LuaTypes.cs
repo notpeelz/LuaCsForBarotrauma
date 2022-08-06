@@ -1,3 +1,5 @@
+using System;
+
 namespace Barotrauma
 {
     public struct LuaSByte
@@ -9,9 +11,9 @@ namespace Barotrauma
             value = (sbyte)v;
         }
 
-        public LuaSByte(string v)
+        public LuaSByte(string v, int radix = 10)
         {
-            value = sbyte.Parse(v);
+            value = Convert.ToSByte(v, radix);
         }
 
         public static implicit operator sbyte(LuaSByte luaValue) => luaValue.value;
@@ -26,9 +28,9 @@ namespace Barotrauma
             value = (byte)v;
         }
 
-        public LuaByte(string v)
+        public LuaByte(string v, int radix = 10)
         {
-            value = byte.Parse(v);
+            value = Convert.ToByte(v, radix);
         }
 
         public static implicit operator byte(LuaByte luaValue) => luaValue.value;
@@ -43,9 +45,9 @@ namespace Barotrauma
             value = (short)v;
         }
 
-        public LuaInt16(string v)
+        public LuaInt16(string v, int radix = 10)
         {
-            value = short.Parse(v);
+            value = Convert.ToInt16(v, radix);
         }
 
         public static implicit operator short(LuaInt16 luaValue) => luaValue.value;
@@ -60,9 +62,9 @@ namespace Barotrauma
             value = (ushort)v;
         }
 
-        public LuaUInt16(string v)
+        public LuaUInt16(string v, int radix = 10)
         {
-            value = ushort.Parse(v);
+            value = Convert.ToUInt16(v, radix);
         }
 
         public static implicit operator ushort(LuaUInt16 luaValue) => luaValue.value;
@@ -77,9 +79,9 @@ namespace Barotrauma
             value = (int)v;
         }
 
-        public LuaInt32(string v)
+        public LuaInt32(string v, int radix = 10)
         {
-            value = int.Parse(v);
+            value = Convert.ToInt32(v, radix);
         }
 
         public static implicit operator int(LuaInt32 luaValue) => luaValue.value;
@@ -94,9 +96,9 @@ namespace Barotrauma
             value = (uint)v;
         }
 
-        public LuaUInt32(string v)
+        public LuaUInt32(string v, int radix = 10)
         {
-            value = uint.Parse(v);
+            value = Convert.ToUInt32(v, radix);
         }
 
         public static implicit operator uint(LuaUInt32 luaValue) => luaValue.value;
@@ -111,9 +113,9 @@ namespace Barotrauma
             value = (long)v;
         }
 
-        public LuaInt64(string v)
+        public LuaInt64(string v, int radix = 10)
         {
-            value = long.Parse(v);
+            value = Convert.ToInt64(v, radix);
         }
 
         public static implicit operator long(LuaInt64 luaValue) => luaValue.value;
@@ -128,9 +130,9 @@ namespace Barotrauma
             value = (ulong)v;
         }
 
-        public LuaUInt64(string v)
+        public LuaUInt64(string v, int radix = 10)
         {
-            value = ulong.Parse(v);
+            value = Convert.ToUInt64(v, radix);
         }
 
         public static implicit operator ulong(LuaUInt64 luaValue) => luaValue.value;
