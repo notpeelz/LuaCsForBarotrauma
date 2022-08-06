@@ -123,60 +123,70 @@ namespace Barotrauma
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(sbyte),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaSByte,
                 converter: luaValue => luaValue.UserData.Object is LuaSByte v
                     ? (sbyte)v
                     : throw new ScriptRuntimeException("use SByte(value) to pass primitive type 'sbyte' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(byte),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaByte,
                 converter: luaValue => luaValue.UserData.Object is LuaByte v
                     ? (byte)v
                     : throw new ScriptRuntimeException("use Byte(value) to pass primitive type 'byte' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(short),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaInt16,
                 converter: luaValue => luaValue.UserData.Object is LuaInt16 v
                     ? (short)v
                     : throw new ScriptRuntimeException("use Int16(value) to pass primitive type 'short' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(ushort),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaUInt16,
                 converter: luaValue => luaValue.UserData.Object is LuaUInt16 v
                     ? (ushort)v
                     : throw new ScriptRuntimeException("use UInt16(value) to pass primitive type 'ushort' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(int),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaInt32,
                 converter: luaValue => luaValue.UserData.Object is LuaInt32 v
                     ? (int)v
                     : throw new ScriptRuntimeException("use Int32(value) to pass primitive type 'int' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(uint),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaUInt32,
                 converter: luaValue => luaValue.UserData.Object is LuaUInt32 v
                     ? (uint)v
                     : throw new ScriptRuntimeException("use UInt32(value) to pass primitive type 'uint' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(long),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaInt64,
                 converter: luaValue => luaValue.UserData.Object is LuaInt64 v
                     ? (long)v
                     : throw new ScriptRuntimeException("use Int64(value) to pass primitive type 'long' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(ulong),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaUInt64,
                 converter: luaValue => luaValue.UserData.Object is LuaUInt64 v
                     ? (ulong)v
                     : throw new ScriptRuntimeException("use UInt64(value) to pass primitive type 'ulong' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(float),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaSingle,
                 converter: luaValue => luaValue.UserData.Object is LuaSingle v
                     ? (float)v
                     : throw new ScriptRuntimeException("use Single(value) to pass primitive type 'float' to C#"));
             Script.GlobalOptions.CustomConverters.SetScriptToClrCustomConversion(
                 scriptDataType: DataType.UserData,
                 clrDataType: typeof(double),
+                canConvert: luaValue => luaValue.UserData?.Object is LuaDouble,
                 converter: luaValue => luaValue.UserData.Object is LuaDouble v
                     ? (double)v
                     : throw new ScriptRuntimeException("use Double(value) to pass primitive type 'double' to C#"));
