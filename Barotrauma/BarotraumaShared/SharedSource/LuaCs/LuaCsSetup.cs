@@ -25,6 +25,8 @@ namespace Barotrauma
 		public LuaCsSetupConfig() { }
 	}
 
+    internal delegate void LuaCsMessageLogger(string prefix, object o);
+
 	partial class LuaCsSetup
 	{
 		public const string LuaSetupFile = "Lua/LuaSetup.lua";
@@ -77,7 +79,9 @@ namespace Barotrauma
 
 		public LuaCsSetup()
 		{
-			Hook = new LuaCsHook(this);
+            MessageLogger = DefaultMessageLogger;
+
+            Hook = new LuaCsHook(this);
 			ModStore = new LuaCsModStore();
 
 			Game = new LuaGame();
@@ -222,38 +226,41 @@ namespace Barotrauma
 		public static void PrintBothError(object message) => PrintErrorBase("[CL ERROR] ", message, "Null");
 #endif
 
-		private static void PrintMessageBase(string prefix, object message, string empty)
+        internal LuaCsMessageLogger MessageLogger { get; set; }
+
+        private static void DefaultMessageLogger(string prefix, object o)
         {
-			if (message == null) { message = empty; }
-			string str = message.ToString();
-
-			for (int i = 0; i < str.Length; i += 1024)
-			{
-				string subStr = str.Substring(i, Math.Min(1024, str.Length - i));
-
+            var message = o.ToString();
+            for (int i = 0; i < message.Length; i += 1024)
+            {
+                var subStr = message.Substring(i, Math.Min(1024, message.Length - i));
 
 #if SERVER
-				if (GameMain.Server != null)
-				{
-					foreach (var c in GameMain.Server.ConnectedClients)
-					{
-						GameMain.Server.SendDirectChatMessage(ChatMessage.Create("", subStr, ChatMessageType.Console, null, textColor: Color.MediumPurple), c);
-					}
+                if (GameMain.Server != null)
+                {
+                    foreach (var c in GameMain.Server.ConnectedClients)
+                    {
+                        GameMain.Server.SendDirectChatMessage(ChatMessage.Create("", subStr, ChatMessageType.Console, null, textColor: Color.MediumPurple), c);
+                    }
 
-					GameServer.Log(prefix + subStr, ServerLog.MessageType.ServerMessage);
-				}
+                    GameServer.Log(prefix + subStr, ServerLog.MessageType.ServerMessage);
+                }
 #endif
-			}
+            }
 
 #if SERVER
-			DebugConsole.NewMessage(message.ToString(), Color.MediumPurple);
+            DebugConsole.NewMessage(message.ToString(), Color.MediumPurple);
 #else
 			DebugConsole.NewMessage(message.ToString(), Color.Purple);
 #endif
-		}
+        }
+
+        private void PrintMessageBase(string prefix, object message, string empty) => MessageLogger?.Invoke(prefix, message ?? empty);
 		private void PrintMessage(object message) => PrintMessageBase("[LUA] ", message, "nil");
-		public static void PrintCsMessage(object message) => PrintMessageBase("[CS] ", message, "Null");
-		public static void PrintLogMessage(object message) => PrintMessageBase("[LuaCs LOG] ", message, "Null");
+		public void PrintLogMessage(object message) => PrintMessageBase("[LuaCs LOG] ", message, "Null");
+
+		// TODO: deprecate this (in an effort to get rid of as much global state as possible)
+		public static void PrintCsMessage(object message) => GameMain.LuaCs.PrintMessage(message);
 
 		private DynValue DoFile(string file, Table globalContext = null, string codeStringFriendly = null)
 		{

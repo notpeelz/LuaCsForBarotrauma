@@ -1168,7 +1168,7 @@ namespace Barotrauma
             {
                 if (methodPatches.Prefixes.Remove(identifier))
                 {
-                    PrintLogMessage($"Replacing existing prefix: {identifier}");
+                    luaCs.PrintLogMessage($"Replacing existing prefix: {identifier}");
                 }
 
                 methodPatches.Prefixes.Add(identifier, new LuaCsPatch
@@ -1181,7 +1181,7 @@ namespace Barotrauma
             {
                 if (methodPatches.Postfixes.Remove(identifier))
                 {
-                    PrintLogMessage($"Replacing existing postfix: {identifier}");
+                    luaCs.PrintLogMessage($"Replacing existing postfix: {identifier}");
                 }
 
                 methodPatches.Postfixes.Add(identifier, new LuaCsPatch
