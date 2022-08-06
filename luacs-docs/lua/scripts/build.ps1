@@ -1,7 +1,7 @@
 Import-Module $PSScriptRoot/../../scripts/location.ps1
 
 try {
-  cd $PSScriptRoot/..
+  Change-Location $PSScriptRoot/..
 
   Remove-Item -Force -Recurse ./build | Out-Null
   New-Item -ItemType Directory ./build | Out-Null

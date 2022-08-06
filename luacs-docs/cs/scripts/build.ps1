@@ -1,7 +1,7 @@
 Import-Module $PSScriptRoot/../../scripts/location.ps1
 
 try {
-  cd $PSScriptRoot/..
+  Change-Location $PSScriptRoot/..
 
   if ((Get-Command "doxgen" -ErrorAction SilentlyContinue) -eq $null) {
     echo "doxygen not found"
@@ -15,7 +15,7 @@ try {
 
   echo "Building server docs"
   try {
-    cd ./baro-server
+    Change-Location ./baro-server
     doxygen ./Doxyfile
   } finally {
     Restore-Location
@@ -23,7 +23,7 @@ try {
 
   echo "Building client docs"
   try {
-    cd ./baro-client
+    Change-Location ./baro-client
     doxygen ./Doxyfile
   } finally {
     Restore-Location

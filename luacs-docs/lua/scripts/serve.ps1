@@ -1,7 +1,7 @@
 Import-Module $PSScriptRoot/../../scripts/location.ps1
 
 try {
-  cd $PSScriptRoot/..
+  Change-Location $PSScriptRoot/..
 
   if ((Get-Command "python3" -ErrorAction SilentlyContinue) -eq $null) {
     echo "python3 not found"

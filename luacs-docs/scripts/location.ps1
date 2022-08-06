@@ -1,13 +1,12 @@
 [System.Collections.ArrayList]$Locations = @()
 
-del -ErrorAction SilentlyContinue alias:cd -Force
-function global:cd($path) {
+function Change-Location($path) {
   $loc = Get-Location
   $Locations.Add($loc)
   Set-Location $path
 }
 
-function global:Restore-Location {
+function Restore-Location {
   $idx = $Locations.Count - 1
   $loc = $Locations[$idx]
   $Locations.RemoveAt($idx)

@@ -1,7 +1,7 @@
 Import-Module $PSScriptRoot/../../scripts/location.ps1
 
 try {
-  cd $PSScriptRoot/..
+  Change-Location $PSScriptRoot/..
 
   $lua_binary = $env:LUA_BINARY
   if ($lua_binary -eq $null) {
@@ -33,7 +33,7 @@ try {
   )
 
   try {
-    cd ./libs/ldoc
+    Change-Location ./libs/ldoc
     luarocks @luarocks_args make
   } finally {
     Restore-Location

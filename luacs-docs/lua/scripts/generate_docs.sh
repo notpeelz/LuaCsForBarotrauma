@@ -10,5 +10,5 @@ if ! command -v "dotnet" &> /dev/null; then
   exit 1
 fi
 
-dotnet build /p:WarningLevel=0 /p:RunCodeAnalysis=false
+dotnet build -clp:"ErrorsOnly;Summary"
 dotnet run --no-build
