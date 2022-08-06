@@ -111,6 +111,7 @@ namespace TestProject.LuaCs
         [Fact]
         public void TestFullMethodReplacement()
         {
+            throw new System.Exception();
             var target = new PatchTarget1();
             AddPrefix<PatchTarget1>("ptable.PreventExecution = true");
             target.Run();
