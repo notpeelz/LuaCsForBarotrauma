@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On push to master branch
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  run-tests:
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      ref: ${{ github.event.ref }}
+
+  publish-release:
+    needs: [run-tests]
+    uses: ./.github/workflows/publish-release.yml

@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Run tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch (workflow_call)
+        uses: actions/checkout@v3
+        if: inputs != null
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+
+      - name: Checkout branch (workflow_dispatch)
+        uses: actions/checkout@v3
+        if: inputs == null
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: |
+            3.1.x
+            6.0.x
+
+      - name: Run tests
+        run: dotnet test LinuxSolution.sln -clp:"ErrorsOnly;Summary"
