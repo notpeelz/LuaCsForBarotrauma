@@ -885,8 +885,12 @@ namespace Barotrauma
                 parameters.Add(new DynamicParameterMapping(paramName, originalMethodParamType, harmonyPatchParamType));
             }
 
+            static string MangleName(object o) => InvalidIdentifierCharsRegex.Replace(o?.ToString(), "_");
+
             var moduleBuilder = patchModuleBuilder.Value;
-            var mangledName = InvalidIdentifierCharsRegex.Replace(original.ToString(), "_");
+            var mangledName = original.DeclaringType != null
+                ? $"{MangleName(original.DeclaringType)}-{MangleName(original)}"
+                : MangleName(original);
             var typeBuilder = moduleBuilder.DefineType($"Patch_{identifier}_{Guid.NewGuid():N}_{mangledName}", TypeAttributes.Public);
             const string METHOD_NAME = "HarmonyPatch";
             var il = Emit.BuildMethod(
@@ -927,10 +931,11 @@ namespace Barotrauma
             il.LoadLocal(patchExists);
             il.IfNot((il) =>
             {
-                // IL: throw new InvalidOperationException("...");
-                il.LoadConstant($"Patch '{identifier}' isn't registered");
-                il.NewObject(typeof(InvalidOperationException), typeof(string));
-                il.Throw();
+                // XXX: if we get here, it's probably because a patched
+                // method was running when `reloadlua` was executed.
+                // This can happen with a postfix on
+                // `Barotrauma.Networking.GameServer#Update`.
+                il.Leave(labelReturn);
             });
 
             // IL: var parameterDict = new Dictionary<string, object>(<paramCount>);
