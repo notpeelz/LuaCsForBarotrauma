@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On push to a secondary branch
+
+on:
+  push:
+    branches-ignore: [master]
+
+jobs:
+  run-tests:
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      ref: ${{ github.event.ref }}

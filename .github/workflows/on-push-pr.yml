@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On push to a PR
+
+on:
+  pull_request:
+
+jobs:
+  run-tests-for-pr:
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      ref: ${{ github.event.pull_request.head.sha }}
