@@ -797,7 +797,8 @@ namespace Barotrauma
                     {
                         argsSb.Append(arg + " ");
                     }
-                    GameMain.LuaCs.HandleException(e, $"Error in Hook '{name}'->'{key}', with args '{argsSb}':\n{e}", ExceptionType.Both);
+                    luaCs.PrintError($"Error in Hook '{name}'->'{key}', with args '{argsSb}':\n{e}", LuaCsMessageOrigin.Unknown);
+                    luaCs.HandleException(e, LuaCsMessageOrigin.Unknown);
                 }
             }
             foreach (var key in hooksToRemove)
@@ -1116,12 +1117,11 @@ namespace Barotrauma
             il.LoadField(luaCsField);
             il.If((il) =>
             {
-                // IL: LuaCs.HandleException(exception, "", ExceptionType.Lua);
+                // IL: LuaCs.HandleException(exception, LuaCsMessageOrigin.LuaMod);
                 il.LoadField(luaCsField);
                 il.LoadLocal(exception);
-                il.LoadConstant("");
-                il.LoadConstant((int)ExceptionType.Lua); // underlying enum type is int
-                il.Call(typeof(LuaCsSetup).GetMethod(nameof(LuaCsSetup.HandleException)));
+                il.LoadConstant((int)LuaCsMessageOrigin.LuaMod); // underlying enum type is int
+                il.Call(typeof(LuaCsSetup).GetMethod(nameof(LuaCsSetup.HandleException), BindingFlags.NonPublic | BindingFlags.Instance));
             });
 
             il.EndCatchBlock(catchBlock);
@@ -1168,7 +1168,7 @@ namespace Barotrauma
             {
                 if (methodPatches.Prefixes.Remove(identifier))
                 {
-                    luaCs.PrintLogMessage($"Replacing existing prefix: {identifier}");
+                    luaCs.PrintMessage($"Replacing existing prefix: {identifier}");
                 }
 
                 methodPatches.Prefixes.Add(identifier, new LuaCsPatch
@@ -1181,7 +1181,7 @@ namespace Barotrauma
             {
                 if (methodPatches.Postfixes.Remove(identifier))
                 {
-                    luaCs.PrintLogMessage($"Replacing existing postfix: {identifier}");
+                    luaCs.PrintMessage($"Replacing existing postfix: {identifier}");
                 }
 
                 methodPatches.Postfixes.Add(identifier, new LuaCsPatch

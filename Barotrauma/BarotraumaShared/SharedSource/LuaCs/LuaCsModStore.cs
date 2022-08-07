@@ -73,7 +73,7 @@ namespace Barotrauma
             {
                 if (luaModInterface.Any(i => i.Equals(modName)))
                 {
-                    GameMain.LuaCs.HandleException(new ArgumentException($"'{modName}' entry already registered"), exceptionType: ExceptionType.Lua);
+                    GameMain.LuaCs.HandleException(new ArgumentException($"'{modName}' entry already registered"), origin: LuaCsMessageOrigin.LuaMod);
                     return null;
                 }
 
@@ -86,7 +86,7 @@ namespace Barotrauma
             {
                 if (csModInterface.Any(i => i.Equals(mod)))
                 {
-                    GameMain.LuaCs.HandleException(new ArgumentException($"'{mod.GetType().FullName}' entry already registered"), exceptionType: ExceptionType.CSharp);
+                    GameMain.LuaCs.HandleException(new ArgumentException($"'{mod.GetType().FullName}' entry already registered"), origin: LuaCsMessageOrigin.CSharpMod);
                     return null;
                 }
 

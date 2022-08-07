@@ -93,9 +93,11 @@ namespace Barotrauma
 					{
 						LuaCsNetReceives[netMessageName](netMessage, client);
 					}
-					catch(Exception e)
+					catch (Exception e)
                     {
-						GameMain.LuaCs.HandleException(e, $"Exception thrown inside NetMessageReceive({netMessageName})", LuaCsSetup.ExceptionType.CSharp);
+						// TODO: make LuaCsNetworking hold a reference to LuaCsSetup instead of using this global
+						GameMain.LuaCs.PrintError($"Exception thrown inside NetMessageReceive({netMessageName})", LuaCsMessageOrigin.Unknown);
+						GameMain.LuaCs.HandleException(e, LuaCsMessageOrigin.Unknown);
                     }
 				}
 			}
@@ -120,7 +122,8 @@ namespace Barotrauma
 					}
 					catch (Exception e)
 					{
-						GameMain.LuaCs.HandleException(e, $"Exception thrown inside NetMessageReceive({netMessageName})", LuaCsSetup.ExceptionType.CSharp);
+						GameMain.LuaCs.PrintError($"Exception thrown inside NetMessageReceive({netMessageName})", LuaCsMessageOrigin.Unknown);
+						GameMain.LuaCs.HandleException(e, LuaCsMessageOrigin.Unknown);
 					}
 				}
 			}

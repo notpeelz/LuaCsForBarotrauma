@@ -3270,7 +3270,7 @@ namespace Barotrauma
                 }
                 catch(Exception ex)
                 {
-                    GameMain.LuaCs.HandleException(ex);
+                    GameMain.LuaCs.HandleException(ex, origin: LuaCsMessageOrigin.LuaMod);
                 }
             }));
             commands.Add(new Command("cl_cs", "cs_cl: runs a string on the client", (string[] args) =>

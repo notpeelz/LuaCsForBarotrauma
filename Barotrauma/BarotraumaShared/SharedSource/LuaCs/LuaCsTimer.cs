@@ -68,7 +68,7 @@ namespace Barotrauma
                     }
                     catch (Exception e)
                     {
-                        GameMain.LuaCs.HandleException(e, "", LuaCsSetup.ExceptionType.CSharp);
+                        GameMain.LuaCs.HandleException(e, origin: LuaCsMessageOrigin.CSharpMod);
                     }
 
                     timedActionsToRemove.Add(timedAction);

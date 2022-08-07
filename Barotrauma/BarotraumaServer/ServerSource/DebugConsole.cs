@@ -1249,7 +1249,7 @@ namespace Barotrauma
                 }
                 catch (Exception ex)
                 {
-                    GameMain.LuaCs.HandleException(ex);
+                    GameMain.LuaCs.HandleException(ex, origin: LuaCsMessageOrigin.LuaMod);
                 }
             }));
             commands.Add(new Command("cs", "cs: runs a string", (string[] args) =>
@@ -1319,13 +1319,13 @@ namespace Barotrauma
                 }
                 catch (UnauthorizedAccessException e)
                 {
-                    GameMain.LuaCs.PrintError("You seem to already have Client Side Lua installed, if you are trying to reinstall, make sure uninstall it first (mainmenu button located top left).");
+                    GameMain.LuaCs.PrintError("You seem to already have Client Side Lua installed, if you are trying to reinstall, make sure uninstall it first (mainmenu button located top left).", origin: LuaCsMessageOrigin.LuaCs);
 
                     return;
                 }
                 catch (Exception e)
                 {
-                    GameMain.LuaCs.HandleException(e);
+                    GameMain.LuaCs.HandleException(e, LuaCsMessageOrigin.LuaCs);
 
                     return;
                 }

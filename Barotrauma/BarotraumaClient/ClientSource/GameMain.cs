@@ -20,7 +20,7 @@ namespace Barotrauma
 {
     class GameMain : Game
     {
-        public static LuaCsSetup LuaCs;
+        internal static LuaCsSetup LuaCs;
 
         public static bool ShowFPS = false;
         public static bool ShowPerf = false;

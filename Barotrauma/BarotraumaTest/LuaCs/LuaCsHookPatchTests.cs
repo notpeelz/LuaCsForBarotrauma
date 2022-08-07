@@ -1,6 +1,7 @@
 ﻿using Barotrauma;
 using Microsoft.Xna.Framework;
 using MoonSharp.Interpreter;
+using System.Runtime.ExceptionServices;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,6 +27,13 @@ namespace TestProject.LuaCs
             {
                 o ??= "null";
                 output.WriteLine(prefix + o);
+            };
+            luaCs.ExceptionHandler = (ex, _) =>
+            {
+                // Pretend we never caught the exception in the first place
+                // (this allows us to preserve the stack trace)
+                var di = ExceptionDispatchInfo.Capture(ex);
+                di.Throw();
             };
             luaCs.Initialize();
             luaCs.Lua.Globals["TestValueType"] = UserData.CreateStatic<TestValueType>();
