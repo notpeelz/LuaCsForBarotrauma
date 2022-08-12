@@ -520,6 +520,7 @@ namespace TestProject.LuaCs
         [Fact]
         public void TestCastPrimitiveWrapperDouble()
         {
+            throw new System.Exception();
             var target = new PatchTarget6();
             AddPrefix<PatchTarget6>(@"
                 ptable['v'] = Double(123.456)
