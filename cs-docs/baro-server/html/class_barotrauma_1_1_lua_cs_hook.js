@@ -24,6 +24,5 @@ var class_barotrauma_1_1_lua_cs_hook =
     [ "RemovePatch", "class_barotrauma_1_1_lua_cs_hook.html#a7eded2f142d556d6ba94e96232cdae39", null ],
     [ "UnhookMethod", "class_barotrauma_1_1_lua_cs_hook.html#ae26f5a0a778a1f96e4a9e5f11de452c2", null ],
     [ "UnhookMethod", "class_barotrauma_1_1_lua_cs_hook.html#ad2c9c7a3677d3562f33774696d0fb23f", null ],
-    [ "Update", "class_barotrauma_1_1_lua_cs_hook.html#a762b2693505263e61976e06c0c5c2ce8", null ],
-    [ "Harmony", "class_barotrauma_1_1_lua_cs_hook.html#af95e9349dad56f6fd961f0df7638a177", null ]
+    [ "Update", "class_barotrauma_1_1_lua_cs_hook.html#a762b2693505263e61976e06c0c5c2ce8", null ]
 ];

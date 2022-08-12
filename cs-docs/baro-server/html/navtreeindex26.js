@@ -1,5 +1,6 @@
 var NAVTREEINDEX26 =
 {
+"class_barotrauma_1_1_localized_string.html#afe6242dfcba8e56b5c1e512fe0766543":[4,0,0,264,7],
 "class_barotrauma_1_1_location.html":[4,0,0,265],
 "class_barotrauma_1_1_location.html#a000af8b0a12b16a09c00cf1cdc0ac74d":[4,0,0,265,29],
 "class_barotrauma_1_1_location.html#a00914d3bd46ed0cd0d3418608578d95b":[4,0,0,265,45],
@@ -209,7 +210,6 @@ var NAVTREEINDEX26 =
 "class_barotrauma_1_1_lua_cs_hook.html#ac6117cd51f359613f46a81f74b88a76c":[4,0,0,275,14],
 "class_barotrauma_1_1_lua_cs_hook.html#ad2c9c7a3677d3562f33774696d0fb23f":[4,0,0,275,20],
 "class_barotrauma_1_1_lua_cs_hook.html#ae26f5a0a778a1f96e4a9e5f11de452c2":[4,0,0,275,19],
-"class_barotrauma_1_1_lua_cs_hook.html#af95e9349dad56f6fd961f0df7638a177":[4,0,0,275,22],
 "class_barotrauma_1_1_lua_cs_hook.html#af9d436ea44d24820f7369c16966e4166":[4,0,0,275,15],
 "class_barotrauma_1_1_lua_cs_hook.html#afe4f1c52f2207efed0047d914f8b71a7":[4,0,0,275,2],
 "class_barotrauma_1_1_lua_cs_hook_1_1_parameter_table.html":[4,0,0,275,0],

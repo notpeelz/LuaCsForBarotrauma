@@ -24,6 +24,7 @@ var class_barotrauma_1_1_sub_editor_screen =
     [ "ClearBackedUpSubInfo", "class_barotrauma_1_1_sub_editor_screen.html#a421e93dbabd2611d27169a831b3fed7d", null ],
     [ "DeselectEditorSpecific", "class_barotrauma_1_1_sub_editor_screen.html#a918c2a1ddbd836ad9c3b51e3de041e6e", null ],
     [ "Draw", "class_barotrauma_1_1_sub_editor_screen.html#a03a2fa5ba460fb5b7c337d3f7e1d5ca1", null ],
+    [ "IsMouseOnEditorGUI", "class_barotrauma_1_1_sub_editor_screen.html#a3f557fec9f9914dadc26969bb64df81b", null ],
     [ "IsSubcategoryHidden", "class_barotrauma_1_1_sub_editor_screen.html#a476e9fdee151e3da746c8a65f001015e", null ],
     [ "LoadSub", "class_barotrauma_1_1_sub_editor_screen.html#a8931cdeb4cb268abd8d02b00ebf4c6ec", null ],
     [ "OnFileDropped", "class_barotrauma_1_1_sub_editor_screen.html#acb3870e0121f1e78308362c6f9e03694", null ],

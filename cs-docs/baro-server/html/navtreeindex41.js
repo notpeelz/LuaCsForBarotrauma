@@ -1,7 +1,5 @@
 var NAVTREEINDEX41 =
 {
-"class_barotrauma_1_1_voting.html#a713617c0e03c174cd18a2362a383c748a6adf97f83acf6453d4a6a4b1070f3754":[4,0,0,454,3,0],
-"class_barotrauma_1_1_voting.html#a713617c0e03c174cd18a2362a383c748a8428552d86c0d262a542a528af490afa":[4,0,0,454,3,1],
 "class_barotrauma_1_1_voting.html#a713617c0e03c174cd18a2362a383c748aa0d0628f6b4e4d78d2ffef4d4d1c4b15":[4,0,0,454,3,3],
 "class_barotrauma_1_1_voting.html#a713617c0e03c174cd18a2362a383c748ad7c8c85bf79bbe1b7188497c32c3b0ca":[4,0,0,454,3,4],
 "class_barotrauma_1_1_voting.html#a924e0ef2bd09372d6a3259d1363f351d":[4,0,0,454,6],
@@ -227,8 +225,8 @@ var NAVTREEINDEX41 =
 "class_voronoi2_1_1_voronoi_cell.html#ad44f6eae5c1c2880e6038f5045310a9a":[4,0,1,7,9],
 "class_voronoi2_1_1_voronoi_cell.html#afdbbfd277515b91389203ff42bf4c4ef":[4,0,1,7,2],
 "classes.html":[4,1],
-"functions.html":[4,3,0,0],
 "functions.html":[4,3,0],
+"functions.html":[4,3,0,0],
 "functions_a.html":[4,3,0,1],
 "functions_b.html":[4,3,0,2],
 "functions_c.html":[4,3,0,3],
@@ -249,5 +247,7 @@ var NAVTREEINDEX41 =
 "functions_func_i.html":[4,3,1,8],
 "functions_func_j.html":[4,3,1,9],
 "functions_func_k.html":[4,3,1,10],
-"functions_func_l.html":[4,3,1,11]
+"functions_func_l.html":[4,3,1,11],
+"functions_func_m.html":[4,3,1,12],
+"functions_func_n.html":[4,3,1,13]
 };

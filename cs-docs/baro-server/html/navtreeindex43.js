@@ -1,13 +1,11 @@
 var NAVTREEINDEX43 =
 {
-"namespace_barotrauma_1_1_map_creatures_1_1_behavior.html":[4,0,0,3,0],
 "namespace_barotrauma_1_1_networking.html":[3,0,0,5],
-"namespace_barotrauma_1_1_networking.html":[4,0,0,4],
-"namespace_barotrauma_1_1_ruin_generation.html":[3,0,0,6],
 "namespace_barotrauma_1_1_ruin_generation.html":[4,0,0,5],
+"namespace_barotrauma_1_1_ruin_generation.html":[3,0,0,6],
 "namespace_barotrauma_1_1_steam.html":[3,0,0,7],
-"namespace_voronoi2.html":[4,0,1],
 "namespace_voronoi2.html":[3,0,1],
+"namespace_voronoi2.html":[4,0,1],
 "namespacemembers.html":[3,1,0],
 "namespacemembers_enum.html":[3,1,2],
 "namespacemembers_func.html":[3,1,1],
@@ -241,13 +239,15 @@ var NAVTREEINDEX43 =
 "struct_barotrauma_1_1_level_1_1_single_level_wall_event_data.html#a82dc3a8965c3c2bc2d6e9fb2f6f24f19":[4,0,0,247,7,1],
 "struct_barotrauma_1_1_lua_byte.html":[4,0,0,272],
 "struct_barotrauma_1_1_lua_byte.html#a738e4daa68a8f3a96b1fa7a3de442e1f":[4,0,0,272,0],
-"struct_barotrauma_1_1_lua_byte.html#ac002feebed64fbbc03831dfbd446025c":[4,0,0,272,1],
+"struct_barotrauma_1_1_lua_byte.html#a97108cd0e9f83fa4747642b9acea26a1":[4,0,0,272,1],
 "struct_barotrauma_1_1_lua_double.html":[4,0,0,282],
 "struct_barotrauma_1_1_lua_double.html#aaa3d02ac15879df2be7b42e65d575959":[4,0,0,282,1],
 "struct_barotrauma_1_1_lua_double.html#ac104ee7277e62e54a185400d239676a0":[4,0,0,282,0],
 "struct_barotrauma_1_1_lua_int16.html":[4,0,0,284],
 "struct_barotrauma_1_1_lua_int16.html#a7001602dc9f5b6858144fcdea236b9a8":[4,0,0,284,0],
-"struct_barotrauma_1_1_lua_int16.html#adaed47ec849a158df715928ba16a8b4e":[4,0,0,284,1],
+"struct_barotrauma_1_1_lua_int16.html#afd5929fd3050e059ff1aa1152dfd657d":[4,0,0,284,1],
 "struct_barotrauma_1_1_lua_int32.html":[4,0,0,285],
-"struct_barotrauma_1_1_lua_int32.html#acfb8b9db46843960028808df394c3995":[4,0,0,285,1]
+"struct_barotrauma_1_1_lua_int32.html#a03b1bc902ad6ede54397242a85809c94":[4,0,0,285,1],
+"struct_barotrauma_1_1_lua_int32.html#adcbdee2c803e94370fe65a6019421614":[4,0,0,285,0],
+"struct_barotrauma_1_1_lua_int64.html":[4,0,0,286]
 };

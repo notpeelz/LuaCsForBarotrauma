@@ -43,8 +43,9 @@ var NAVTREEINDEX21 =
 "class_barotrauma_1_1_items_1_1_components_1_1_quality.html#a7e869f46572a33ebf2abdfc388f74f0dad33ea9427080f0fd5bd700ff6a2ad1d9":[4,0,0,2,0,63,0,18],
 "class_barotrauma_1_1_items_1_1_components_1_1_quality.html#a7e869f46572a33ebf2abdfc388f74f0daddf016b276499eef195979277d1c6671":[4,0,0,2,0,63,0,9],
 "class_barotrauma_1_1_items_1_1_components_1_1_quality.html#a7e869f46572a33ebf2abdfc388f74f0dadea65b527cb1c9501b7deda369fcce29":[4,0,0,2,0,63,0,5],
+"class_barotrauma_1_1_items_1_1_components_1_1_quality.html#a900fa2550f60353cdb012d0f79246fbd":[4,0,0,2,0,63,3],
 "class_barotrauma_1_1_items_1_1_components_1_1_quality.html#ac2ba4239a56cef18d4be660b72305717":[4,0,0,2,0,63,2],
-"class_barotrauma_1_1_items_1_1_components_1_1_quality.html#acfc80cf17bdc5862e91c6cfc609c6ba6":[4,0,0,2,0,63,3],
+"class_barotrauma_1_1_items_1_1_components_1_1_quality.html#acfc80cf17bdc5862e91c6cfc609c6ba6":[4,0,0,2,0,63,4],
 "class_barotrauma_1_1_items_1_1_components_1_1_quality.html#aff553fc2398afbff6d1a846a622ef148":[4,0,0,2,0,63,1],
 "class_barotrauma_1_1_items_1_1_components_1_1_ranged_weapon.html":[4,0,0,2,0,64],
 "class_barotrauma_1_1_items_1_1_components_1_1_ranged_weapon.html#a09be495e4c66121c30e43cea4de25475":[4,0,0,2,0,64,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX21 =
 "class_barotrauma_1_1_items_1_1_components_1_1_smoke_detector.html#a785172edc1cd5faaa3caf9ce26bd8123":[4,0,0,2,0,75,2],
 "class_barotrauma_1_1_items_1_1_components_1_1_smoke_detector.html#aeed062f0a7984d4fc0b86f2860e58b98":[4,0,0,2,0,75,1],
 "class_barotrauma_1_1_items_1_1_components_1_1_sonar.html":[4,0,0,2,0,76],
-"class_barotrauma_1_1_items_1_1_components_1_1_sonar.html#a0dd0a9cbd6f98c27e3f10d2aed7d8a69":[4,0,0,2,0,76,2],
-"class_barotrauma_1_1_items_1_1_components_1_1_sonar.html#a2518473398b50b62756b7b504276b7b0":[4,0,0,2,0,76,7]
+"class_barotrauma_1_1_items_1_1_components_1_1_sonar.html#a0dd0a9cbd6f98c27e3f10d2aed7d8a69":[4,0,0,2,0,76,2]
 };
