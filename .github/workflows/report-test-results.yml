@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Report test results
+
+# HACK: the "on-push-pr" workflow gets run with read-only perms.
+# This workflow will run in our repo with write permissions after
+# the PR is done running.
+on:
+  workflow_run:
+    workflows:
+      - On push to master branch
+      - On push to a secondary branch
+      - On push to a PR
+    types: [completed]
+
+jobs:
+  report-test-results:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report test results
+        uses: dorny/test-reporter@v1
+        with:
+          name: Test results
+          artifact: test-results
+          path: test-results.trx
+          fail-on-error: true
+          reporter: dotnet-trx
