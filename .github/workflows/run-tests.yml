@@ -33,7 +33,10 @@ jobs:
 
       - name: Run tests
         continue-on-error: true
-        run: dotnet test LinuxSolution.sln -clp:"ErrorsOnly;Summary" --logger "trx;LogFileName=$PWD/test-results.trx"
+        run: |
+          set +e
+          dotnet test LinuxSolution.sln -clp:"ErrorsOnly;Summary" --logger "trx;LogFileName=$PWD/test-results.trx"
+          echo "EXITCODE=$?" >> "$GITHUB_ENV"
 
       - name: Upload test results
         uses: actions/upload-artifact@v3
@@ -41,10 +44,5 @@ jobs:
           name: test-results
           path: test-results.trx
 
-      - name: Report test results
-        uses: dorny/test-reporter@v1
-        with:
-          name: Test results
-          path: test-results.trx
-          fail-on-error: true
-          reporter: dotnet-trx
+      - name: Set exit code
+        run: exit "$EXITCODE"
