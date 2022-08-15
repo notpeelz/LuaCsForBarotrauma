@@ -11,7 +11,7 @@ if ! command -v "$lua_binary" &> /dev/null; then
   exit 1
 fi
 
-if ! command -v "$lua_binary" &> /dev/null; then
+if ! command -v "luarocks" &> /dev/null; then
   echo "luarocks not found"
   exit 1
 fi
