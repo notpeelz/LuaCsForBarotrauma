@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../../Barotrauma/BarotraumaClient/LinuxClient.csproj" PrivateAssets="false" />
-    <ProjectReference Include="../../../../Libraries/Farseer Physics Engine 3.5/Farseer.NetStandard.csproj" PrivateAssets="false" />
+    <ProjectReference Include="../../../../../Barotrauma/BarotraumaClient/LinuxClient.csproj" PrivateAssets="false" />
+    <ProjectReference Include="../../../../../Libraries/Farseer Physics Engine 3.5/Farseer.NetStandard.csproj" PrivateAssets="false" />
   </ItemGroup>
 </Project>

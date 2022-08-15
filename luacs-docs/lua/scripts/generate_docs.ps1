@@ -1,15 +1,2 @@
-Import-Module -DisableNameChecking $PSScriptRoot/../../scripts/location.psm1
-
-try {
-  Change-Location $PSScriptRoot/LuaDocsGenerator
-
-  if ((Get-Command "dotnet" -ErrorAction SilentlyContinue) -eq $null) {
-    echo "dotnet not found"
-    exit 1
-  }
-
-  dotnet build -clp:"ErrorsOnly;Summary"
-  dotnet run --no-build
-} finally {
-  Restore-Location
-}
+. $PSScriptRoot/impl/shared/check-ps-version.ps1
+. $PSScriptRoot/impl/shared/run-in-path.ps1 $PSScriptRoot/.. $PSScriptRoot/impl/generate_docs.ps1

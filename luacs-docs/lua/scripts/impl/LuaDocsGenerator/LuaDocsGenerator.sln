@@ -1,13 +1,13 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaDocsGenerator", "LuaDocsGenerator.csproj", "{F1961973-E69E-41A7-BE13-4F931890BC70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinuxClient", "..\..\..\..\Barotrauma\BarotraumaClient\LinuxClient.csproj", "{426071C4-6668-4CF9-A44C-5FBEB72C469B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinuxClient", "..\..\..\..\..\Barotrauma\BarotraumaClient\LinuxClient.csproj", "{426071C4-6668-4CF9-A44C-5FBEB72C469B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Farseer.NetStandard", "..\..\..\..\Libraries\Farseer Physics Engine 3.5\Farseer.NetStandard.csproj", "{F8F85D52-11B5-4177-914C-9AC75345D089}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Farseer.NetStandard", "..\..\..\..\..\Libraries\Farseer Physics Engine 3.5\Farseer.NetStandard.csproj", "{F8F85D52-11B5-4177-914C-9AC75345D089}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
