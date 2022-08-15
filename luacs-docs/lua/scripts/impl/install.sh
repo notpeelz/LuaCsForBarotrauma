@@ -16,8 +16,12 @@ if ! command -v "luarocks" &> /dev/null; then
   exit 1
 fi
 
-lua_version="$("$lua_binary" -v | grep -Po '^Lua \K(\d+)\.(\d+)')"
-echo "Detected lua version $lua_version"
+lua_version="$("$lua_binary" -v 2>&1 | grep -Po '^Lua \K(\d+)\.(\d+)')"
+if [[ -z "$lua_version" ]]; then
+  echo "Failed to extract lua version"
+  exit 1
+fi
+echo "Detected lua version: $lua_version"
 
 # Install dependencies (npm style)
 # NOTE: you need to have lua header files installed.
