@@ -5,7 +5,7 @@ if ((Get-Command "python3" -ErrorAction SilentlyContinue) -eq $null) {
   exit 1
 }
 
-python3 $PSScriptRoot/shared/http_server.py ./build `
+python3 $PSScriptRoot/shared/http-server.py ./build `
   --port 8001 `
   --route /:html `
   --route /baro-client:baro-client `

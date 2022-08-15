@@ -40,7 +40,7 @@ jobs:
 
       - name: Run docs generator script
         working-directory: ${{ env.DOCS_LUA_ROOT }}
-        run: ./scripts/generate_docs.sh
+        run: ./scripts/generate-docs.sh
 
       - name: Run build script
         working-directory: ${{ env.DOCS_LUA_ROOT }}

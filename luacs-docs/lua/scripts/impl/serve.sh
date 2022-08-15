@@ -7,4 +7,4 @@ if ! command -v "python3" &> /dev/null; then
   exit 1
 fi
 
-python3 "$DIR/shared/http_server.py" ./build --port 8000
+python3 "$DIR/shared/http-server.py" ./build --port 8000
