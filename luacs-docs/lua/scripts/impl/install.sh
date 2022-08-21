@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 
-lua_binary="${LUA_BINARY:-lua}"
+set -Eeuo pipefail
 
-if ! command -v "$lua_binary" &> /dev/null; then
-  if [[ -z "${LUA_BINARY+x}" ]]; then
-    echo "lua binary not found; please set \$LUA_BINARY manually."
-  else
-    echo "lua binary not found: $lua_binary"
-  fi
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+. "$DIR/shared/script-base.sh"
+
+add_opt_with_value "lua-binary" "" "<value>" "Path to (or the name of) the Lua binary"
+
+handle_opt() {
+  case "$1" in
+    --lua-binary)
+      opt_lua_bin="$2"
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+parse_opts "$@"
+
+opt_lua_bin="lua"
+if ! command -v "$opt_lua_bin" &> /dev/null; then
+  echo "lua not found"
   exit 1
 fi
 
@@ -16,25 +31,21 @@ if ! command -v "luarocks" &> /dev/null; then
   exit 1
 fi
 
-lua_version="$("$lua_binary" -v 2>&1 | grep -Po '^Lua \K(\d+)\.(\d+)')"
+lua_version="$("$opt_lua_bin" -v 2>&1 | grep -Po '^Lua \K(\d+)\.(\d+)')"
 if [[ -z "$lua_version" ]]; then
   echo "Failed to extract lua version"
   exit 1
 fi
 echo "Detected lua version: $lua_version"
 
-# Install dependencies (npm style)
-# NOTE: you need to have lua header files installed.
-# On debian-based distros: apt install libluaX.X-dev
-
-luarocks_args=(
-  "--tree"
-  "$PWD/lua_modules"
-  "--lua-version"
-  "$lua_version"
-)
-
 (
-  cd libs/ldoc
-  luarocks ${luarocks_args[@]} make
+  # XXX: we only cd because `luarocks make` can find the rockspec file
+  # automatically from the working directory
+  workdir="$PWD"
+  cd "$DIR/libs/ldoc"
+
+  run_task_fg luarocks \
+    --tree "$workdir/lua_modules" \
+    --lua-version "$lua_version" \
+    make
 )

@@ -6,12 +6,10 @@ file = {
 
 module_file = {}
 
-dir = "build"
 project = "LuaForBarotrauma"
 title = "LuaForBarotrauma Documentation"
 
 no_space_before_args = true
-style = "css"
 template = "templates"
 format = "markdown"
 ignore = true

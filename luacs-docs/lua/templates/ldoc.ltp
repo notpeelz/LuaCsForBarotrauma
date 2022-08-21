@@ -2,7 +2,7 @@
 {%
 math.randomseed(os.time())
 
-local baseUrl = ldoc.css:gsub("ldoc.css", "")
+local baseUrl = ldoc.css:gsub("ldoc.css", "") -- FIXME: this is ugly
 local repo = "https://github.com/evilfactory/LuaCsForBarotrauma"
 local pageTitle = mod and (ldoc.display_name(mod) .. " - " .. ldoc.title) or ldoc.title
 
@@ -115,8 +115,8 @@ end
     {% end %}
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro" />
-    <link rel="stylesheet" href="{* ldoc.asset_url("ldoc.css") *}" />
-    <link rel="stylesheet" href="{* ldoc.asset_url("highlight.css") *}" />
+    <link rel="stylesheet" href="{* ldoc.asset_url("css/ldoc.css") *}" />
+    <link rel="stylesheet" href="{* ldoc.asset_url("css/highlight.css") *}" />
   </head>
 
   <body>
@@ -138,8 +138,8 @@ end
       </article>
     </main>
 
-    <script type="text/javascript" src="{* ldoc.asset_url("app.js") *}"></script>
-    <script type="text/javascript" src="{* ldoc.asset_url("highlight.min.js") *}"></script>
+    <script type="text/javascript" src="{* ldoc.asset_url("js/app.js") *}"></script>
+    <script type="text/javascript" src="{* ldoc.asset_url("js/highlight.min.js") *}"></script>
     <script type="text/javascript">
       var elements = document.querySelectorAll("pre code")
 

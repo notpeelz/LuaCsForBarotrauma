@@ -128,57 +128,6 @@ string TypeToString(Type type, bool useLuaTypes = true) {
   return Impl(type.Namespace);
 }
 
-static (bool Success, string Output, string Error) TryRunGitCommand(string args) {
-  static string? GetGitBinary() {
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-      return Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
-          ?.Split(';')
-          .Select(x => Path.Join(x, "git.exe"))
-          .FirstOrDefault(File.Exists);
-    } else {
-      return Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
-          ?.Split(':')
-          .Select(x => Path.Join(x, "git"))
-          .FirstOrDefault(File.Exists);
-    }
-  }
-
-  var gitBinary = GetGitBinary();
-  if (gitBinary == null) {
-    throw new InvalidOperationException("Failed to find git binary in PATH");
-  }
-
-  using var process = Process.Start(new ProcessStartInfo(gitBinary, args) {
-    WindowStyle = ProcessWindowStyle.Hidden,
-    CreateNoWindow = true,
-    UseShellExecute = false,
-    RedirectStandardInput = true,
-    RedirectStandardError = true,
-    RedirectStandardOutput = true,
-  });
-
-  if (process == null)
-    throw new InvalidOperationException($"Failed to run git command: {args}");
-
-  process.Start();
-
-  var stdOut = process.StandardOutput.ReadToEndAsync();
-  var stdErr = process.StandardError.ReadToEndAsync();
-  Task.WhenAll(stdOut, stdErr).GetAwaiter().GetResult();
-  process.WaitForExit();
-
-  return (process.ExitCode == 0, stdOut.Result.TrimEnd('\r', '\n'), stdErr.Result);
-}
-
-var gitDir = (new Func<String>(() => {
-  var (success, gitDir, error) = TryRunGitCommand("rev-parse --show-toplevel");
-  if (!success) {
-    throw new InvalidDataException($"Failed to determine the root of the git repo: {error}");
-  }
-
-  return gitDir;
-}))();
-
 void GenerateDocsImpl(Type type, string baseFile, string outFile, string? categoryName = null) {
   categoryName ??= type.Name;
   var sb = new StringBuilder();
@@ -330,9 +279,8 @@ local {type.Name} = {{}}".ReplaceLineEndings("\n");
   File.WriteAllText(outFile, sb.ToString());
 }
 
-var basePath = $"{gitDir}/luacs-docs/lua";
-var generatedDir = $"{basePath}/lua/generated";
-var baseLuaDir = $"{basePath}/baseluadocs";
+var generatedDir = "lua/generated";
+var baseLuaDir = "baseluadocs";
 void GenerateDocs(Type type, string file, string? categoryName = null) {
   GenerateDocsImpl(type, $"{baseLuaDir}/{file}", $"{generatedDir}/{file}", categoryName);
 }

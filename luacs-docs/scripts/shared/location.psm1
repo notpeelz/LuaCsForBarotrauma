@@ -1,14 +1,14 @@
 [System.Collections.ArrayList]$Locations = @()
 
-function Change-Location($path) {
+function Update-Location($path) {
   $loc = Get-Location
-  $Locations.Add($loc) | Out-Null
-  Set-Location $path | Out-Null
+  $Locations.Add($loc) > $null
+  Set-Location $path > $null
 }
 
 function Restore-Location {
   $idx = $Locations.Count - 1
   $loc = $Locations[$idx]
-  $Locations.RemoveAt($idx) | Out-Null
-  Set-Location $loc | Out-Null
+  $Locations.RemoveAt($idx) > $null
+  Set-Location $loc > $null
 }

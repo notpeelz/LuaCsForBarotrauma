@@ -1,6 +1,9 @@
 [submodule "Libraries/moonsharp"]
 	path = Libraries/moonsharp
 	url = https://github.com/evilfactory/moonsharp.git
-[submodule "luacs-docs/lua/libs/ldoc"]
-	path = luacs-docs/lua/libs/ldoc
+[submodule "luacs-docs/lua/scripts/impl/libs/ldoc"]
+	path = luacs-docs/lua/scripts/impl/libs/ldoc
 	url = https://github.com/evilfactory/LDoc.git
+[submodule "luacs-docs/scripts/shared/getopt"]
+	path = luacs-docs/scripts/shared/bash-getopt
+	url = https://github.com/notpeelz/bash-getopt.git
