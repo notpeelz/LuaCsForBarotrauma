@@ -4,11 +4,6 @@ root = true
 charset = utf-8
 insert_final_newline = true
 
-[*.{sln,cs}]
-# VS defaults to utf-8 with BOM -- let's not create more merge conflicts
-# XXX: csproj files dont't have a BOM for some reason?
-charset = utf-8-bom
-
 [*.cs]
 indent_style = space
 indent_size = 4
