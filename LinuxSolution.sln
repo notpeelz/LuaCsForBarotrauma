@@ -42,7 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonoGame.Framework.Linux.Ne
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LinuxTest", "Barotrauma\BarotraumaTest\LinuxTest.csproj", "{F1B80D94-8BD6-48CE-8D17-BB2A5C98BCA3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter.netcore", "Libraries\moonsharp\src\MoonSharp.Interpreter\_Projects\MoonSharp.Interpreter.netcore\MoonSharp.Interpreter.netcore.csproj", "{382DFA63-78FC-41AC-BA85-630960A56E5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter", "Libraries\moonsharp\MoonSharp.Interpreter\MoonSharp.Interpreter.csproj", "{382DFA63-78FC-41AC-BA85-630960A56E5C}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution

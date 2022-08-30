@@ -42,7 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpFont.NetStandard", "Li
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WindowsTest", "Barotrauma\BarotraumaTest\WindowsTest.csproj", "{C7212AE2-A925-4225-A639-AE0653EF65B0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter.netcore", "Libraries\moonsharp\src\MoonSharp.Interpreter\_Projects\MoonSharp.Interpreter.netcore\MoonSharp.Interpreter.netcore.csproj", "{2EEF2610-64A3-4E5D-95ED-0E181C1A34ED}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter", "Libraries\moonsharp\MoonSharp.Interpreter\MoonSharp.Interpreter.csproj", "{2EEF2610-64A3-4E5D-95ED-0E181C1A34ED}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution

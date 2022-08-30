@@ -39,7 +39,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Facepunch.Steamworks.Posix"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MacTest", "Barotrauma\BarotraumaTest\MacTest.csproj", "{20BC9336-B439-4BF1-8B65-D587DBF421D1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter.netcore", "Libraries\moonsharp\src\MoonSharp.Interpreter\_Projects\MoonSharp.Interpreter.netcore\MoonSharp.Interpreter.netcore.csproj", "{40BDE83D-61D5-481C-A53E-E0F5B23881E2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MoonSharp.Interpreter", "Libraries\moonsharp\MoonSharp.Interpreter\MoonSharp.Interpreter.csproj", "{40BDE83D-61D5-481C-A53E-E0F5B23881E2}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
