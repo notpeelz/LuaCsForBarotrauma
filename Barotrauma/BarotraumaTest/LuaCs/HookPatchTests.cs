@@ -478,7 +478,7 @@ namespace TestProject.LuaCs
         {
             var target = new PatchTarget6();
             luaCs.AddPrefix<PatchTarget6>(@"
-                ptable['v'] = Double(123.456)
+                ptable['v'] = 123.456
             ", testMethod: nameof(PatchTarget6.RunDouble));
             var returnValue = target.RunDouble(111.111d);
             Assert.True(target.ran);

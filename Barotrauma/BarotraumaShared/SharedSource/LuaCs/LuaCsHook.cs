@@ -91,7 +91,7 @@ namespace Barotrauma
         }
 
         // Copied from https://github.com/evilfactory/moonsharp/blob/5264656c6442e783f3c75082cce69a93d66d4cc0/src/MoonSharp.Interpreter/Interop/Converters/ScriptToClrConversions.cs#L79-L99
-        private static MethodInfo HasImplicitConversion(Type baseType, Type targetType)
+        private static MethodInfo GetImplicitOperatorMethod(Type baseType, Type targetType)
         {
             try
             {
@@ -101,12 +101,12 @@ namespace Barotrauma
             {
                 if (baseType.BaseType != null)
                 {
-                    return HasImplicitConversion(baseType.BaseType, targetType);
+                    return GetImplicitOperatorMethod(baseType.BaseType, targetType);
                 }
 
                 if (targetType.BaseType != null)
                 {
-                    return HasImplicitConversion(baseType, targetType.BaseType);
+                    return GetImplicitOperatorMethod(baseType, targetType.BaseType);
                 }
 
                 return null;
@@ -141,18 +141,18 @@ namespace Barotrauma
             il.Call(typeof(object).GetMethod("GetType"));
             il.StoreLocal(baseType);
 
-            // IL: var implicitConversionMethod = SigilExtensions.HasImplicitConversion(baseType, <targetType>);
-            var implicitConversionMethod = il.DeclareLocal(typeof(MethodInfo), $"cast_implicitConversionMethod_{guid}");
+            // IL: var implicitOperatorMethod = SigilExtensions.GetImplicitOperatorMethod(baseType, <targetType>);
+            var implicitOperatorMethod = il.DeclareLocal(typeof(MethodInfo), $"cast_implicitOperatorMethod_{guid}");
             il.LoadLocal(baseType);
             il.LoadType(targetType);
-            il.Call(typeof(SigilExtensions).GetMethod(nameof(HasImplicitConversion), BindingFlags.NonPublic | BindingFlags.Static));
-            il.StoreLocal(implicitConversionMethod);
+            il.Call(typeof(SigilExtensions).GetMethod(nameof(GetImplicitOperatorMethod), BindingFlags.NonPublic | BindingFlags.Static));
+            il.StoreLocal(implicitOperatorMethod);
 
             // IL: <TargetType> castValue;
             var castValue = il.DeclareLocal(targetType, $"cast_castValue_{guid}");
 
             // IL: if (implicitConversionMethod != null)
-            il.LoadLocal(implicitConversionMethod);
+            il.LoadLocal(implicitOperatorMethod);
             il.Branch((il) =>
             {
                 // IL: var methodInvokeParams = new object[1];
@@ -168,7 +168,7 @@ namespace Barotrauma
                 il.StoreElement<object>();
 
                 // IL: castValue = (<TargetType>)implicitConversionMethod.Invoke(null, methodInvokeParams);
-                il.LoadLocal(implicitConversionMethod);
+                il.LoadLocal(implicitOperatorMethod);
                 il.LoadNull(); // first parameter is null because implicit cast operators are static
                 il.LoadLocal(methodInvokeParams);
                 il.Call(typeof(MethodInfo).GetMethod("Invoke", new[] { typeof(object), typeof(object[]) }));

@@ -320,6 +320,10 @@ namespace Barotrauma
 
 		public DynValue CallLuaFunction(object function, params object[] args)
 		{
+            // XXX: `lua` might be null if `LuaCsSetup.Stop()` is called while
+            // a patched function is still running.
+            if (lua == null) return null;
+
 			lock (lua)
 			{
 				try

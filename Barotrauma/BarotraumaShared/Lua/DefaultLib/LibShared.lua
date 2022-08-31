@@ -6,21 +6,10 @@ local CreateEnum = LuaSetup.LuaUserData.CreateEnumTable
 
 require("DefaultLib/Utils/SteamApi")
 
-defaultLib["SByte"] = CreateStatic("Barotrauma.LuaSByte", true)
-defaultLib["Byte"] = CreateStatic("Barotrauma.LuaByte", true)
-defaultLib["Int16"] = CreateStatic("Barotrauma.LuaInt16", true)
-defaultLib["UInt16"] = CreateStatic("Barotrauma.LuaUInt16", true)
-defaultLib["Int32"] = CreateStatic("Barotrauma.LuaInt32", true)
-defaultLib["UInt32"] = CreateStatic("Barotrauma.LuaUInt32", true)
-defaultLib["Int64"] = CreateStatic("Barotrauma.LuaInt64", true)
-defaultLib["UInt64"] = CreateStatic("Barotrauma.LuaUInt64", true)
-defaultLib["Single"] = CreateStatic("Barotrauma.LuaSingle", true)
-defaultLib["Double"] = CreateStatic("Barotrauma.LuaDouble", true)
-
 -- Backward compatibility
-defaultLib["Float"] = CreateStatic("Barotrauma.LuaSingle", true)
-defaultLib["Short"] = CreateStatic("Barotrauma.LuaInt16", true)
-defaultLib["UShort"] = CreateStatic("Barotrauma.LuaUInt16", true)
+defaultLib["Float"] = Single
+defaultLib["Short"] = Int16
+defaultLib["UShort"] = UInt16
 
 defaultLib["SpawnType"] = CreateEnum("Barotrauma.SpawnType")
 defaultLib["ChatMessageType"] = CreateEnum("Barotrauma.Networking.ChatMessageType")
