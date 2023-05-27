@@ -19,3 +19,6 @@ jobs:
 
   publish-release:
     uses: ./.github/workflows/publish-release.yml
+    with:
+      ref: ${{ github.event.ref }}
+      tag: latest

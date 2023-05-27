@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Create pre-release
+
+on:
+  schedule:
+    - cron: 0 0 * * *
+  workflow_dispatch:
+
+jobs:
+  publish-release:
+    runs-on: ubuntu-latest
+    outputs:
+      has-new-commits: "false"
+    steps:
+      - name: Extract branch name
+        id: extract-branch-name
+        run: |
+          echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+      - name: Sanity checks
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.extract-branch-name != 'develop' }}
+        run: |
+          echo "::error::this workflow can only be run on the \"develop\" branch"
+          exit 1
+
+      - name: Get latest nightly-tagged commit
+        id: get-latest-tag
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        with:
+          script: |
+            github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "tags/nightly",
+            })
+
+      - name: Get latest commit on dev branch
+        id: get-latest-commit
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        with:
+          script: |
+            github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/develop",
+            })
+
+      - name: Check for new commits
+        env:
+          LATEST_TAGGED_SHA: "${{ steps.get-latest-tag.outputs.object.sha }}"
+          LATEST_SHA: "${{ steps.get-latest-commit.outputs.object.sha }}"
+        run: |
+          if [[ "$LATEST_TAGGED_SHA" != "$LATEST_SHA" ]]; then
+            echo "::set-output name=has-new-commits::true"
+          else
+            echo "::set-output name=has-new-commits::false"
+          fi
+
+      - name: Publish release
+        uses: ./.github/workflows/publish-release.yml
+        with:
+          ref: ${{ github.event.ref }}
+          tag: nightly
