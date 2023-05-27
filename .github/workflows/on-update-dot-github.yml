@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: On changes to .github
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - "./.github/**"
+
+jobs:
+  harden-ci-security:
+    uses: ./.github/workflows/harden-ci-security.yml
+    with:
+      ref: ${{ github.event.ref }}
