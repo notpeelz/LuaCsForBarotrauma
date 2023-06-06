@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
-using System.Reflection;
 
 namespace Barotrauma
 {
-    public abstract class ACsMod : IDisposable
+    public abstract class ACsMod : IDisposable, IAssemblyPlugin
     {
         private static List<ACsMod> mods = new List<ACsMod>();
         public static List<ACsMod> LoadedMods { get => mods; }
@@ -29,7 +29,14 @@ namespace Barotrauma
             LoadedMods.Add(this);
         }
 
-        public void Dispose()
+        public virtual void Initialize() { }
+
+        public virtual void OnLoadCompleted() { }
+
+        public virtual PluginInfo GetPluginInfo() =>
+            new PluginInfo("Undefined", "0.0.0.0", ImmutableArray<string>.Empty);
+
+        public virtual void Dispose()
         {
             try
             {
@@ -44,7 +51,10 @@ namespace Barotrauma
             IsDisposed = true;
         }
 
-        /// Error or client exit
+        /// <summary>
+        /// [Obsolete] use Dispose instead. Called on plugin unloading. 
+        /// </summary>
+        [Obsolete]
         public abstract void Stop();
     }
 }
