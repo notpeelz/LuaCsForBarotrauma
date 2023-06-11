@@ -14,9 +14,8 @@ using System.Runtime.CompilerServices;
 
 namespace Barotrauma
 {
-    class CsScriptBase : AssemblyLoadContext
+    public class CsScriptBase : AssemblyManager.MemoryAssemblyContextLoader
     {
-
         public const string CsScriptAssembly = "NetScriptAssembly";
 
         public static readonly string[] LoadedAssemblyName = {
@@ -30,7 +29,7 @@ namespace Barotrauma
 
         public CSharpParseOptions ParseOptions { get; protected set; }
 
-        public CsScriptBase() : base(isCollectible: true) {
+        public CsScriptBase() : base(null) {
             ParseOptions = CSharpParseOptions.Default
                 .WithPreprocessorSymbols(new[] { LuaCsSetup.IsServer ? "SERVER" : (LuaCsSetup.IsClient ? "CLIENT" : "UNDEFINED") });
         }

@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Barotrauma;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
+using Microsoft.CodeAnalysis;
 
 namespace Barotrauma;
 
@@ -36,8 +39,17 @@ public static class ModUtils
     
     #region FILE_IO
 
+    // ReSharper disable once InconsistentNaming
     public static class IO
     {
+        public static IEnumerable<string> FindAllFilesInDirectory(string folder, string pattern,
+            SearchOption option)
+        {
+            if (!Directory.Exists(folder))
+                return new string[] { };
+            return Directory.GetFiles(folder, pattern, option);
+        }
+
         public static string PrepareFilePathString(string filePath) =>
             PrepareFilePathString(Path.GetDirectoryName(filePath)!, Path.GetFileName(filePath));
 
@@ -58,10 +70,10 @@ public static class ModUtils
             return path.CleanUpPath();
         }
 
-        public static IOActionResultState GetFileText(string filePath, out string fileText)
+        public static IOActionResultState GetOrCreateFileText(string filePath, out string fileText, Func<string> fileDataFactory = null)
         {
             fileText = null;
-            IOActionResultState ioActionResultState = CreateFilePath(filePath, out var fp);
+            IOActionResultState ioActionResultState = CreateFilePath(filePath, out var fp, fileDataFactory);
             if (ioActionResultState == IOActionResultState.Success)
             {
                 try
@@ -109,7 +121,7 @@ public static class ModUtils
             return ioActionResultState;
         }
 
-        public static IOActionResultState CreateFilePath(string filePath, out string formattedFilePath)
+        public static IOActionResultState CreateFilePath(string filePath, out string formattedFilePath, Func<string> fileDataFactory = null)
         {
             string file = Path.GetFileName(filePath);
             string path = Path.GetDirectoryName(filePath)!;
@@ -120,7 +132,7 @@ public static class ModUtils
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 if (!File.Exists(formattedFilePath))
-                    File.WriteAllText(formattedFilePath, "");
+                    File.WriteAllText(formattedFilePath, fileDataFactory is null ? "" : fileDataFactory.Invoke());
                 return IOActionResultState.Success;
             }
             catch (ArgumentNullException ane)

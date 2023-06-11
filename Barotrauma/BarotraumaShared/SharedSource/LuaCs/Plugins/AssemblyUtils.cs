@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Barotrauma;
 
@@ -9,6 +13,9 @@ namespace Barotrauma;
 /// </summary>
 public static class AssemblyUtils
 {
+
+    #region PUBLIC_API
+
     /// <summary>
     /// [NOT THREAD-SAFE]
     /// Allows iteration over all types (including interfaces) in all loaded assemblies managed by the AsmMgr and base game.
@@ -16,12 +23,20 @@ public static class AssemblyUtils
     /// <returns></returns>
     public static IEnumerable<Type> GetAllTypesInLoadedAssemblies()
     {
-        foreach (var type in typeof(Barotrauma.GameMain).Assembly.GetSafeTypes())   
+        foreach (var type in typeof(GameMain).Assembly.GetSafeTypes())   
         {
             yield return type;
         }
+        
+        foreach (var assemblyName in typeof(GameMain).Assembly.GetReferencedAssemblies())
+        {
+            foreach (var type in Assembly.Load(assemblyName).GetSafeTypes())
+            {
+                yield return type;
+            }
+        }
 
-        foreach (Type type in AssemblyManager.GetAllTypesInLoadedAssemblies())
+        foreach (var type in AssemblyManager.GetAllTypesInLoadedAssemblies())
         {
             yield return type;
         }
@@ -35,7 +50,7 @@ public static class AssemblyUtils
     /// <returns>An Enumerator for matching types.</returns>
     public static IEnumerable<Type> GetSubTypesInLoadedAssemblies<T>()
     {
-        foreach (var type in typeof(Barotrauma.GameMain).Assembly.GetSafeTypes().Where(t => typeof(T).IsAssignableFrom(t) && !t.IsInterface))   
+        foreach (var type in typeof(GameMain).Assembly.GetSafeTypes().Where(t => typeof(T).IsAssignableFrom(t) && !t.IsInterface))   
         {
             yield return type;
         }
@@ -54,14 +69,25 @@ public static class AssemblyUtils
     /// <returns>An Enumerator for matching types.</returns>
     public static IEnumerable<Type> GetMatchingTypesInLoadedAssemblies(string name)
     {
-        foreach (var type in typeof(Barotrauma.GameMain).Assembly.GetSafeTypes().Where(t => t.Name.Equals(name) && !t.IsInterface))   
+        foreach (var type in typeof(GameMain).Assembly.GetSafeTypes().Where(t => t.Name.Equals(name) && !t.IsInterface))   
         {
             yield return type;
         }
 
-        foreach (Type type in AssemblyManager.GetMatchingTypesInLoadedAssemblies(name))
+        foreach (var assemblyName in typeof(GameMain).Assembly.GetReferencedAssemblies())
+        {
+            foreach (var type in Assembly.Load(assemblyName).GetSafeTypes().Where(t => t.Name.Equals(name) && !t.IsInterface))
+            {
+                yield return type;
+            }
+        }
+
+        foreach (var type in AssemblyManager.GetMatchingTypesInLoadedAssemblies(name))
         {
             yield return type;
         }
     }
+
+    #endregion
+
 }

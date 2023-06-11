@@ -23,23 +23,6 @@ public static class PluginHelper
         return Directory.GetFiles(rootPath, PluginAsmFileSuffix, SearchOption.TopDirectoryOnly).ToList();
     }
 
-    public static string GetApplicationModSubDir(ApplicationMode mode) =>
-        mode switch
-        {
-            ApplicationMode.Client => "bin/Client",
-            ApplicationMode.Server => "bin/Server",
-            _ => "bin/Client"   //default to client mode
-        };
-
-    public static string GetPlatformModSubDir(TargetPlatform target) =>
-        target switch
-        {
-            TargetPlatform.Windows => "Windows",
-            TargetPlatform.Linux => "Linux",
-            TargetPlatform.MacOSX => "OSX",
-            _ => "Windows"
-        };
-
     public static List<string> GetAllAssemblyPathsInPackages(ApplicationMode mode, TargetPlatform platform)
     {
         if (!IsInit)
@@ -55,33 +38,67 @@ public static class PluginHelper
                 continue;
             scannedPackages.Add(package);
             try
-            {
-                string baseForcedSearchPath = Path.GetFullPath(
-                    Path.Combine(
-                        Path.GetDirectoryName(package.Path)!,
-                        GetApplicationModSubDir(mode),
-                        "Forced")
-                );
+            { 
                 string baseStandardSearchPath = Path.GetFullPath(
                     Path.Combine(
                         Path.GetDirectoryName(package.Path)!,
                         GetApplicationModSubDir(mode),
                         "Standard")
                 );
+                
                 // Add always load packages
-                dllPaths.AddRange(FindAssembliesFilePaths(baseForcedSearchPath));
+                dllPaths.AddRange(FindAssembliesFilePaths(GetPath(package.Path, true, true)));
+                dllPaths.AddRange(FindAssembliesFilePaths(GetPath(package.Path, true, false)));
+
                 // Add enabled-only load packages
                 if (ContentPackageManager.EnabledPackages.All.Contains(package))
                 {
-                    dllPaths.AddRange(FindAssembliesFilePaths(baseStandardSearchPath));
+                    dllPaths.AddRange(FindAssembliesFilePaths(GetPath(package.Path, false, true)));
+                    dllPaths.AddRange(FindAssembliesFilePaths(GetPath(package.Path, false, false)));
                 }
             }
             catch(Exception e)
             {
-                Barotrauma.ModUtils.Logging.PrintError($"PluginHelper::GetAllAssemblyPathsInPackages() | Unable to parse the package: {package.Name} | Details: {e.Message}");
+                ModUtils.Logging.PrintError($"PluginHelper::GetAllAssemblyPathsInPackages() | Unable to parse the package: {package.Name} | Details: {e.Message}");
             }
         }
         return dllPaths;
+
+        string GetPath(string packagePath, bool forced, bool basePath)
+        {
+            if (basePath)
+            {
+                return Path.Combine(
+                    Path.GetDirectoryName(packagePath)!,
+                    GetApplicationModSubDir(mode),
+                    forced ? "Forced" : "Standard"
+                    );
+            }
+
+            return Path.Combine(
+                Path.GetDirectoryName(packagePath)!,
+                GetApplicationModSubDir(mode),
+                forced ? "Forced" : "Standard",
+                GetPlatformModSubDir(platform)
+            );
+        }
+
+        string GetApplicationModSubDir(ApplicationMode mode) =>
+            mode switch
+            {
+                ApplicationMode.Client => "bin/Client",
+                ApplicationMode.Server => "bin/Server",
+                _ => "bin/Client"   //default to client mode
+            };
+
+        string GetPlatformModSubDir(TargetPlatform target) =>
+            target switch
+            {
+                TargetPlatform.Windows => "Windows",
+                TargetPlatform.Linux => "Linux",
+                TargetPlatform.MacOSX => "OSX",
+                _ => "Windows"
+            };
     }
     
     [MethodImpl(MethodImplOptions.Synchronized | MethodImplOptions.NoInlining)]
@@ -127,18 +144,18 @@ public static class PluginHelper
         
         lock (_OpsLock)
         {
-            LuaCsSetup.PrintCsMessage("Loading Assembly Plugins...");
+            ModUtils.Logging.PrintMessage("Loading Assembly Plugins...");
             List<string> pluginDllPaths = GetAllAssemblyPathsInPackages(appMode, targetPlatform);
 
             foreach (string path in pluginDllPaths)
             {
-                LuaCsSetup.PrintCsMessage($"Found Assembly Path: {path}");
+                ModUtils.Logging.PrintMessage($"Found Assembly Path: {path}");
             }
             List<AssemblyManager.LoadedACL> loadedAcls = new();
             foreach (string dllPath in pluginDllPaths)
             {
                 AssemblyManager.AssemblyLoadingSuccessState alss
-                    = AssemblyManager.LoadAssembliesAndPluginsFromLocation(dllPath, out var loadedAcl);
+                    = AssemblyManager.LoadAssembliesAndPluginTypesFromLocation(dllPath, out var loadedAcl);
                 if (alss == AssemblyManager.AssemblyLoadingSuccessState.Success)
                 {
                     if (loadedAcl is not null)
@@ -150,12 +167,12 @@ public static class PluginHelper
             {
                 foreach (var pluginInfo in pluginInfos)
                 {
-                    LuaCsSetup.PrintCsMessage($"ModConfigManager: Loaded Assembly Plugin: {pluginInfo.ModName}, Version: {pluginInfo.Version}");
+                    ModUtils.Logging.PrintMessage($"Loaded Assembly Plugin: {pluginInfo.ModName}, Version: {pluginInfo.Version}");
                 }
             }
             else
             {
-               ModUtils.Logging.PrintError("ModConfigManager: ERROR: Unable to load plugins.");
+                ModUtils.Logging.PrintError("ERROR: Unable to load plugins.");
             }
         }
     }

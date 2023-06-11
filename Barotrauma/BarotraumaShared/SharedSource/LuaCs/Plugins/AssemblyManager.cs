@@ -8,6 +8,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Threading;
 using Barotrauma;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Emit;
 
 // ReSharper disable EventNeverSubscribedTo.Global
 // ReSharper disable InconsistentNaming
@@ -49,7 +51,7 @@ public static class AssemblyManager
     public static event Action<string, Exception> OnException;
 
     /// <summary>
-    /// For unloading issue debugging. Called whenever AssemblyContextLoader [load context] is unloaded. 
+    /// For unloading issue debugging. Called whenever FileAssemblyContextLoader [load context] is unloaded. 
     /// </summary>
     public static event Action<string> OnACLUnload; 
     
@@ -59,7 +61,7 @@ public static class AssemblyManager
     /// [DEBUG ONLY]
     /// Returns a list of the current unloading ACLs. 
     /// </summary>
-    public static ImmutableList<WeakReference<AssemblyContextLoader>> StillUnloadingACLs
+    public static ImmutableList<WeakReference<FileAssemblyContextLoader>> StillUnloadingACLs
     {
         get
         {
@@ -118,7 +120,7 @@ public static class AssemblyManager
     /// <returns>Loading Operation Success Status.</returns>
     public static AssemblyLoadingSuccessState LoadAssembly(string absFilePath, bool instancePlugins = false)
     {
-        AssemblyLoadingSuccessState alss = LoadAssembliesAndPluginsFromLocation(absFilePath, out var loadedAcl);
+        AssemblyLoadingSuccessState alss = LoadAssembliesAndPluginTypesFromLocation(absFilePath, out var loadedAcl);
         if (alss == AssemblyLoadingSuccessState.Success && PluginsLoaded && instancePlugins)
         {
             if (loadedAcl is null)
@@ -348,8 +350,14 @@ public static class AssemblyManager
 
     #region InternalAPI
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginsFromLocation(string filePath,
+    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromSources(SyntaxTree sources)
+    {
+        throw new NotImplementedException();
+    }
+    
+    
+
+    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromLocation(string filePath,
         out LoadedACL loadedAcl)
     {
         loadedAcl = null;
@@ -383,7 +391,7 @@ public static class AssemblyManager
         {
             try
             {
-                AssemblyContextLoader acl = new AssemblyContextLoader(filePath);
+                FileAssemblyContextLoader acl = new FileAssemblyContextLoader(filePath);
                 acl.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(filePath)));
                 LoadedACL lc = new LoadedACL(
                     filePath,
@@ -394,7 +402,7 @@ public static class AssemblyManager
                 foreach (Assembly aclAssembly in acl.Assemblies)
                 {
                     OnAssemblyLoaded?.Invoke(aclAssembly);
-                    var r = GetPluginTypesFromAssembly(aclAssembly);
+                    var r = GetPluginTypesFromAssembly<IAssemblyPlugin>(aclAssembly);
                     if (r is not null)
                         lc.PluginTypes?.AddRange(r);
                 }
@@ -406,32 +414,32 @@ public static class AssemblyManager
             }
             catch (ArgumentNullException ane)
             {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginsFromLocation() | EXCEPTION<ArgNull>.",
+                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<ArgNull>.",
                     ane);
                 return AssemblyLoadingSuccessState.BadFilePath;
             }
             catch (ArgumentException ae)
             {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginsFromLocation() | EXCEPTION<Argument>.",
+                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<Argument>.",
                     ae);
                 return AssemblyLoadingSuccessState.BadFilePath;
             }
             catch (FileLoadException fle)
             {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginsFromLocation() | EXCEPTION<FileLoad>.",
+                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<FileLoad>.",
                     fle);
                 return AssemblyLoadingSuccessState.CannotLoadFile;
             }
             catch (FileNotFoundException fne)
             {
                 OnException?.Invoke(
-                    $"AssemblyManager::LoadAssembliesAndPluginsFromLocation() | EXCEPTION<FileNotFound>.", fne);
+                    $"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<FileNotFound>.", fne);
                 return AssemblyLoadingSuccessState.NoAssemblyFound;
             }
             catch (BadImageFormatException bfe)
             {
                 OnException?.Invoke(
-                    $"AssemblyManager::LoadAssembliesAndPluginsFromLocation() | EXCEPTION<BadAssemblyFile>.", bfe);
+                    $"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<BadAssemblyFile>.", bfe);
                 return AssemblyLoadingSuccessState.InvalidAssembly;
             }
         }
@@ -459,12 +467,20 @@ public static class AssemblyManager
             {
                 foreach (Type type in loadedAcl.Value.PluginTypes)
                 {
-                    IAssemblyPlugin plugin = (IAssemblyPlugin)Activator.CreateInstance(type);
-                    if (plugin is not null)
+                    try
                     {
-                        plugin.Initialize();
-                        pInfo.Add(plugin.GetPluginInfo());
-                        loadedAcl.Value.LoadedPlugins.Add(plugin);
+                        IAssemblyPlugin plugin = (IAssemblyPlugin)Activator.CreateInstance(type);
+                        if (plugin is not null)
+                        {
+                            plugin.Initialize();
+                            pInfo.Add(plugin.GetPluginInfo());
+                            loadedAcl.Value.LoadedPlugins.Add(plugin);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
                     }
                 }
 
@@ -623,11 +639,11 @@ public static class AssemblyManager
 
     #region FunctionsData
 
-    private static List<Type> GetPluginTypesFromAssembly(Assembly assembly)
+    private static List<Type> GetPluginTypesFromAssembly<T>(Assembly assembly)
     {
         try
         {
-            return assembly.GetSafeTypes().Where(t => typeof(IAssemblyPlugin).IsAssignableFrom(t)).ToList();
+            return assembly.GetSafeTypes().Where(t => typeof(T).IsAssignableFrom(t)).ToList();
         }
         catch (Exception e)
         {
@@ -640,56 +656,59 @@ public static class AssemblyManager
 
     #region TypeDefs
 
-    // ReSharper disable once NotAccessedPositionalProperty.Global
-    internal record LoadedACL(string FilePath, 
-        List<Type> PluginTypes, 
-        List<IAssemblyPlugin> LoadedPlugins,
-        AssemblyContextLoader Acl);
-    
-    public sealed class AssemblyContextLoader : AssemblyLoadContext
+    public abstract class AssemblyContextLoader : AssemblyLoadContext
     {
-        private AssemblyDependencyResolver dependencyResolver;
-        private bool IsResolving;   //this is to avoid circular dependency lookup.
-        
-        public AssemblyContextLoader(string mainAssemblyLoadPath) : base(isCollectible: true)
+        protected bool IsResolving;   //this is to avoid circular dependency lookup.
+
+        protected AssemblyContextLoader() : base(isCollectible: true)
         {
-            dependencyResolver = new AssemblyDependencyResolver(mainAssemblyLoadPath);
+            
         }
-        
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract")]
         protected override Assembly Load(AssemblyName assemblyName)
         {
             if (IsResolving)
                 return null;    //circular resolution fast exit.
-            
-            string assPath = dependencyResolver.ResolveAssemblyToPath(assemblyName);
-            if (assPath is not null)
-                return LoadFromAssemblyPath(assPath);
 
             try
             {
-                //try resolve against other loaded alcs
                 IsResolving = true;
-                Assembly ass;
+
+                // resolve self collection
+                Assembly ass = this.Assemblies.FirstOrDefault(a =>
+                    a.FullName is not null && a.FullName.Equals(assemblyName.FullName), null);
+
+                if (ass is not null)
+                    return ass;
+                
                 try
                 {
+                    // TODO: Remove, replaced by memory load contexts
                     ass = GameMain.LuaCs.CsScriptLoader.LoadFromAssemblyName(assemblyName);
                     if (ass is not null)
                         return ass;
                 }
-                // ReSharper disable once EmptyGeneralCatchClause
-                catch(Exception)
+                catch
                 {
                     // LoadFromAssemblyName throws if it fails.
                 }
+                
+                //try resolve against other loaded alcs
                 foreach (var loadedAcL in LoadedACLs)
                 {
-                    if (loadedAcL.Value.Acl is not null)
+                    if (loadedAcL.Value.Acl is null) continue;
+                    
+                    try
                     {
                         ass = loadedAcL.Value.Acl.LoadFromAssemblyName(assemblyName);
                         if (ass is not null)
                             return ass;
+                    }
+                    catch
+                    {
+                        // LoadFromAssemblyName throws if it fails.
                     }
                 }
 
@@ -704,6 +723,35 @@ public static class AssemblyManager
             
             return null;
         }
+    }
+    
+    public class FileAssemblyContextLoader : AssemblyContextLoader
+    {
+        private AssemblyDependencyResolver dependencyResolver;
+
+        public FileAssemblyContextLoader(string mainAssemblyLoadPath)
+        {
+            if (mainAssemblyLoadPath is null)
+                return;
+            dependencyResolver = new AssemblyDependencyResolver(mainAssemblyLoadPath);
+        }
+        
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract")]
+        protected override Assembly Load(AssemblyName assemblyName)
+        {
+            if (IsResolving)
+                return null;    //circular resolution fast exit.
+            
+            string assPath = dependencyResolver.ResolveAssemblyToPath(assemblyName);
+            if (assPath is not null)
+            {
+                IsResolving = false;
+                return LoadFromAssemblyPath(assPath);
+            }
+
+            return base.Load(assemblyName);
+        }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
@@ -714,6 +762,47 @@ public static class AssemblyManager
             return IntPtr.Zero;
         }
     }
+
+    public class MemoryAssemblyContextLoader : AssemblyContextLoader
+    {
+        private Assembly CompiledAssembly;
+        public bool IsReady { get; private set; }
+        public EmitResult CompilationResult { get; private set; }
+        
+        public MemoryAssemblyContextLoader(string sources)
+        {
+            
+        }
+
+        
+        
+        protected override Assembly Load(AssemblyName assemblyName)
+        {
+            if (IsResolving)
+                return null;
+
+            if (this.CompiledAssembly is not null
+                && this.CompiledAssembly.FullName is not null
+                && this.CompiledAssembly.FullName.Equals(assemblyName.FullName))
+            {
+                return CompiledAssembly;
+            }
+            
+            return base.Load(assemblyName);
+        }
+
+        private new void Unload()
+        {
+            CompiledAssembly = null;
+            base.Unload();
+        }
+    }
+    
+    // ReSharper disable once NotAccessedPositionalProperty.Global
+    public record LoadedACL(string FilePath, 
+        List<Type> PluginTypes, 
+        List<IAssemblyPlugin> LoadedPlugins,
+        AssemblyContextLoader Acl);
 
     public enum AssemblyLoadingSuccessState
     {
