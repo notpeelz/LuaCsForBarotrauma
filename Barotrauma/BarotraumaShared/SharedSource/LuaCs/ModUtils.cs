@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Barotrauma;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
@@ -234,6 +235,10 @@ public static class ModUtils
 
     public static class Game
     {
+        /// <summary>
+        /// Returns whether or not there is a round running.
+        /// </summary>
+        /// <returns></returns>
         public static bool IsRoundInProgress()
         {
 #if CLIENT
@@ -242,6 +247,140 @@ public static class ModUtils
                 return false;
 #endif
             return GameMain.GameSession is not null && Level.Loaded is not null;
+        }
+        
+        /// <summary>
+        /// Given a table of packages and dependent packages, will sort them by dependency loading order along with packages
+        /// that cannot be loaded due to errors or failing the predicate checks.
+        /// </summary>
+        /// <param name="packages">A dictionary/map with key as the package and the elements as it's dependencies.</param>
+        /// <param name="readyToLoad">List of packages that are ready to load and in the correct order.</param>
+        /// <param name="cannotLoadPackages">Packages with errors or cyclic dependencies.</param>
+        /// <param name="packageChecksPredicate">Optional: Allows for a custom checks to be performed on each package.
+        /// Returns a bool indicating if the package is ready to load.</param>
+        /// <returns>Whether or not the process produces a usable list.</returns>
+        public static bool OrderAndFilterPackagesByDependencies(
+            Dictionary<ContentPackage, IEnumerable<ContentPackage>> packages,
+            out IEnumerable<ContentPackage> readyToLoad,
+            out IEnumerable<KeyValuePair<ContentPackage, string>> cannotLoadPackages,
+            Func<ContentPackage, bool> packageChecksPredicate = null)
+        {
+            HashSet<ContentPackage> completedPackages = new();
+            List<ContentPackage> readyPackages = new();
+            Dictionary<ContentPackage, string> unableToLoad = new();
+            HashSet<ContentPackage> currentNodeChain = new();
+
+            readyToLoad = readyPackages;
+            cannotLoadPackages = unableToLoad;
+
+            try
+            {
+                foreach (var toProcessPack in packages)
+                {
+                    ProcessPackage(toProcessPack.Key, toProcessPack.Value);
+                }
+
+                PackageProcRet ProcessPackage(ContentPackage packageToProcess, IEnumerable<ContentPackage> dependencies)
+                {
+                    //cyclic handling
+                    if (unableToLoad.ContainsKey(packageToProcess))
+                    {
+                        return PackageProcRet.BadPackage;
+                    }
+
+                    // already processed
+                    if (completedPackages.Contains(packageToProcess))
+                    {
+                        return PackageProcRet.AlreadyCompleted;
+                    }
+
+                    // cyclic check
+                    if (currentNodeChain.Contains(packageToProcess))
+                    {
+                        StringBuilder sb = new();
+                        sb.AppendLine("Error: Cyclic Dependency. ")
+                            .Append(
+                                "The following ContentPackages rely on eachother in a way that makes it impossible to know which to load first! ")
+                            .Append(
+                                "Note: the package listed twice shows where the cycle starts/ends and is not necessarily the problematic package.");
+                        int i = 0;
+                        foreach (var package in currentNodeChain)
+                        {
+                            i++;
+                            sb.AppendLine($"{i}. {package.Name}");
+                        }
+
+                        sb.AppendLine($"{i}. {packageToProcess.Name}");
+                        unableToLoad.Add(packageToProcess, sb.ToString());
+                        completedPackages.Add(packageToProcess);
+                        return PackageProcRet.BadPackage;
+                    }
+
+                    if (packageChecksPredicate is not null && !packageChecksPredicate.Invoke(packageToProcess))
+                    {
+                        unableToLoad.Add(packageToProcess, $"Unable to load package {packageToProcess.Name} due to failing checks.");
+                        completedPackages.Add(packageToProcess);
+                        return PackageProcRet.BadPackage;
+                    }
+
+                    currentNodeChain.Add(packageToProcess);
+
+                    foreach (ContentPackage dependency in dependencies)
+                    {
+                        // The mod lists a dependent that was not found during the discovery phase.
+                        if (!packages.ContainsKey(dependency))
+                        {
+                            // search to see if it's enabled
+                            if (!ContentPackageManager.EnabledPackages.All.Contains(dependency))
+                            {
+                                // present warning but allow loading anyways, better to let the user just disable the package if it's really an issue.
+                                ModUtils.Logging.PrintError(
+                                    $"Warning: the ContentPackage of {packageToProcess.Name} requires the Dependency {dependency.Name} but this package wasn't found in the enabled mods list!");
+                            }
+
+                            continue;
+                        }
+
+                        var ret = ProcessPackage(dependency, packages[dependency]);
+
+                        if (ret is PackageProcRet.BadPackage)
+                        {
+                            if (!unableToLoad.ContainsKey(packageToProcess))
+                            {
+                                unableToLoad.Add(packageToProcess, $"Error: Dependency failure. Failed to load {dependency.Name}");
+                            }
+                            currentNodeChain.Remove(packageToProcess);
+                            if (!completedPackages.Contains(packageToProcess))
+                            {
+                                completedPackages.Add(packageToProcess);
+                            }
+                            return PackageProcRet.BadPackage;
+                        }
+                    }
+                    
+                    currentNodeChain.Remove(packageToProcess);
+                    completedPackages.Add(packageToProcess);
+                    readyPackages.Add(packageToProcess); 
+                    return PackageProcRet.Completed;
+                }
+            }
+            catch (Exception e)
+            {
+                ModUtils.Logging.PrintError($"Error while generating dependency loading order! Exception: {e.Message}");
+    #if DEBUG
+                ModUtils.Logging.PrintError($"Error while generating dependency loading order! Exception: {e.StackTrace}");
+    #endif
+                return false;
+            }
+
+            return true;
+        }
+
+        private enum PackageProcRet : byte
+        {
+            AlreadyCompleted,
+            Completed,
+            BadPackage
         }
     }
 
