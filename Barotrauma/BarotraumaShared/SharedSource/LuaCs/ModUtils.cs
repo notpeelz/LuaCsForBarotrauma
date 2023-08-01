@@ -368,7 +368,7 @@ public static class ModUtils
             {
                 ModUtils.Logging.PrintError($"Error while generating dependency loading order! Exception: {e.Message}");
     #if DEBUG
-                ModUtils.Logging.PrintError($"Error while generating dependency loading order! Exception: {e.StackTrace}");
+                ModUtils.Logging.PrintError($"Stack Trace: {e.StackTrace}");
     #endif
                 return false;
             }

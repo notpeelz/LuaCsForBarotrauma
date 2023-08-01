@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
 using System.Linq;
 using System.Text;
 using FarseerPhysics.Common;
@@ -92,10 +94,56 @@ public class CsScriptManager
         if (ModUtils.IO.IOActionResultState.Success == ModUtils.IO.GetOrCreateFileText(
                 filepath, out string fileText, () =>
                 {
-                    throw new NotImplementedException();
+                    using (StringWriter sw = new StringWriter())
+                    {
+                        XmlSerializer s = new XmlSerializer(typeof(RunConfig));
+                        RunConfig r = new()
+                        {
+                            Client = "Standard",
+                            Server = "Standard",
+                            Dependencies = new RunConfig.Dependency[]{}
+                        };
+                        s.Serialize(sw, r);
+                        return sw.ToString();
+                    }
                 }))
         {
-            
+            XmlSerializer s = new XmlSerializer(typeof(RunConfig));
+            try
+            {
+                using (TextReader tr = new StringReader(fileText))
+                {
+                    config = (RunConfig)s.Deserialize(tr);
+                }
+                // Sanitization
+                config.Client = SanitizeRun(config.Client);
+                config.Server = SanitizeRun(config.Server);
+                if (config.Dependencies is null)
+                {
+                    config.Dependencies = new RunConfig.Dependency[] { };
+                }
+
+                static string SanitizeRun(string str) =>
+                    str switch
+                    {
+                        null => "Standard",
+                        "" => "Standard",
+                        _ => str[0].ToString().ToUpper() + str.Substring(1).ToLower()
+                    };
+            }
+            catch(InvalidOperationException ioe)
+            {
+                ModUtils.Logging.PrintError($"Error while parsing run config for {package.Name}, using defaults.");
+#if DEBUG
+                ModUtils.Logging.PrintError($"Exception: {ioe.Message}. Details: {ioe.InnerException?.Message}");
+#endif
+                config = new RunConfig()
+                {
+                    Client = "Standard",
+                    Server = "Standard",
+                    Dependencies = new RunConfig.Dependency[] { }
+                };
+            }
         }
 
         throw new NotImplementedException();
