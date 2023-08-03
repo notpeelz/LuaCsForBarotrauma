@@ -33,11 +33,13 @@ public sealed class RunConfig
         /// <summary>
         /// Steam Workshop ID of the dependency.
         /// </summary>
+        [XmlElement(ElementName = "SteamWorkshopId")]
         public ulong SteamWorkshopId { get; set; }
         
         /// <summary>
         /// Package Name of the dependency. Not needed if SteamWorkshopId is set.
         /// </summary>
+        [XmlElement(ElementName = "PackageName")]
         public string PackageName { get; set; }
     }
     

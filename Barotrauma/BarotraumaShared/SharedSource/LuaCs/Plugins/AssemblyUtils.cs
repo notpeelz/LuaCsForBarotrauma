@@ -41,7 +41,8 @@ public static class AssemblyUtils
             yield return type;
         }
     }
-    
+
+
     /// <summary>
     /// [NOT THREAD-SAFE]
     /// Allows iteration over all non-interface types in all loaded assemblies in the AsmMgr that are assignable to the given type (IsAssignableFrom).

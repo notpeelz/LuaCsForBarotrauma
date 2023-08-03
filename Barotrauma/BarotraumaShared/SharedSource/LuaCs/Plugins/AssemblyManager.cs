@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -61,7 +62,7 @@ public static class AssemblyManager
     /// [DEBUG ONLY]
     /// Returns a list of the current unloading ACLs. 
     /// </summary>
-    public static ImmutableList<WeakReference<FileAssemblyContextLoader>> StillUnloadingACLs
+    public static ImmutableList<WeakReference<AssemblyContextLoader>> StillUnloadingACLs
     {
         get
         {
@@ -350,7 +351,7 @@ public static class AssemblyManager
 
     #region InternalAPI
 
-    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromSources(SyntaxTree sources)
+    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromSources(SyntaxTree sources, string[] dependenciesFilePaths = null)
     {
         throw new NotImplementedException();
     }
@@ -769,7 +770,7 @@ public static class AssemblyManager
         public bool IsReady { get; private set; }
         public EmitResult CompilationResult { get; private set; }
         
-        public MemoryAssemblyContextLoader(string sources)
+        public MemoryAssemblyContextLoader(string sources, string[] dependenciesFilePaths)
         {
             
         }
