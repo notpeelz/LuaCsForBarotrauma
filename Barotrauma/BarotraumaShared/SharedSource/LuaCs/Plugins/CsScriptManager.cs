@@ -30,13 +30,13 @@ public class CsScriptManager
 #endif
         });
     
-    private static readonly SyntaxTree AssemblyImports = CSharpSyntaxTree.ParseText(
+    private static readonly SyntaxTree BaseAssemblyImports = CSharpSyntaxTree.ParseText(
         new StringBuilder()
             .AppendLine("using System.Reflection;")
             .AppendLine("using Barotrauma;")
             .AppendLine("using Luatrauma;")
-            .AppendLine("[assembly: IgnoresAccessChecksTo(\"Barotrauma\")")
-            .AppendLine("[assembly: IgnoresAccessChecksTo(\"DedicatedServer\")")
+            .AppendLine("[assembly: IgnoresAccessChecksTo(\"Barotrauma\")]")
+            .AppendLine("[assembly: IgnoresAccessChecksTo(\"DedicatedServer\")]")
             .ToString(),
         ScriptParseOptions);
 
@@ -62,95 +62,9 @@ public class CsScriptManager
             .ToList();
     }
 
+    public static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="package"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static IEnumerable<SyntaxTree> GeneratePackageScriptAssemblyInfo(ContentPackage package)
-    {
-        List<SyntaxTree> syntaxTree = new();
-        syntaxTree.Add(GetPackageScriptImports());
-        
-        throw new NotImplementedException();
-    }
-
-
-    public static IEnumerable<SyntaxTree> GeneratePackageScriptTree(ContentPackage package)
-    {
-        var syntaxTree = new List<SyntaxTree>();
-        syntaxTree.AddRange(GeneratePackageScriptAssemblyInfo(package));
-
-
-        throw new NotImplementedException();
-    }
-
-    public static SyntaxTree GetPackageScriptImports() => AssemblyImports;
-
-    public static bool GetOrCreateRunConfig(ContentPackage package, out RunConfig config)
-    {
-        string filepath = System.IO.Path.Combine(package.Path, "CSharp", "RunConfig.xml");
-        if (ModUtils.IO.IOActionResultState.Success == ModUtils.IO.GetOrCreateFileText(
-                filepath, out string fileText, () =>
-                {
-                    using (StringWriter sw = new StringWriter())
-                    {
-                        XmlSerializer s = new XmlSerializer(typeof(RunConfig));
-                        RunConfig r = CreateNewRunConfig();
-                        s.Serialize(sw, r);
-                        return sw.ToString();
-                    }
-                }))
-        {
-            XmlSerializer s = new XmlSerializer(typeof(RunConfig));
-            try
-            {
-                using (TextReader tr = new StringReader(fileText))
-                {
-                    config = (RunConfig)s.Deserialize(tr);
-                }
-                // Sanitization
-                config.Client = SanitizeRunSetting(config.Client);
-                config.Server = SanitizeRunSetting(config.Server);
-                if (config.Dependencies is null)
-                {
-                    config.Dependencies = new RunConfig.Dependency[] { };
-                }
-
-                static string SanitizeRunSetting(string str) =>
-                    str switch
-                    {
-                        null => "Standard",
-                        "" => "Standard",
-                        _ => str[0].ToString().ToUpper() + str.Substring(1).ToLower()
-                    };
-
-                return true;
-            }
-            catch(InvalidOperationException ioe)
-            {
-                ModUtils.Logging.PrintError($"Error while parsing run config for {package.Name}, using defaults.");
-#if DEBUG
-                ModUtils.Logging.PrintError($"Exception: {ioe.Message}. Details: {ioe.InnerException?.Message}");
-#endif
-                config = CreateNewRunConfig();
-                return false;
-            }
-        }
-
-        config = CreateNewRunConfig();
-
-        return false;
-
-        RunConfig CreateNewRunConfig() => new()
-        {
-            Client = "Standard",
-            Server = "Standard",
-            Dependencies = new RunConfig.Dependency[] { }
-        };
-    }
+    
 
     #endregion
 
@@ -158,20 +72,21 @@ public class CsScriptManager
 
     #region INTERNALS
 
+    
     /// <summary>
     /// Builds a list of ContentPackage dependencies for each of the packages in the list. Note: All dependencies must be included in the provided list of packages.
     /// </summary>
     /// <param name="packages">List of packages to check</param>
     /// <param name="dependenciesMap">Dependencies by package</param>
     /// <returns>True if all dependencies were found.</returns>
-    private bool BuildDependenciesMap(in List<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
+    private static bool BuildDependenciesMap(in List<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
     {
         bool reliableMap = true;
         dependenciesMap = new();
         foreach (var package in packages)
         {
             dependenciesMap.Add(package, new());
-            if (GetOrCreateRunConfig(package, out var config))
+            if (ModUtils.IO.GetOrCreateRunConfig(package, out var config))
             {
                 if (config.Dependencies is null)
                     continue;
@@ -212,7 +127,7 @@ public class CsScriptManager
     /// <param name="packageChecksPredicate">Optional: Allows for a custom checks to be performed on each package.
     /// Returns a bool indicating if the package is ready to load.</param>
     /// <returns>Whether or not the process produces a usable list.</returns>
-    public static bool OrderAndFilterPackagesByDependencies(
+    private static bool OrderAndFilterPackagesByDependencies(
         Dictionary<ContentPackage, IEnumerable<ContentPackage>> packages,
         out IEnumerable<ContentPackage> readyToLoad,
         out IEnumerable<KeyValuePair<ContentPackage, string>> cannotLoadPackages,

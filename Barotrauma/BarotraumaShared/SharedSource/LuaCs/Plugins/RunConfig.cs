@@ -42,5 +42,25 @@ public sealed class RunConfig
         [XmlElement(ElementName = "PackageName")]
         public string PackageName { get; set; }
     }
+
+    public RunConfig Sanitize()
+    {
+        Client = SanitizeRunSetting(Client);
+        Server = SanitizeRunSetting(Server);
+        if (Dependencies is null)
+        {
+            Dependencies = new RunConfig.Dependency[] { };
+        }
+
+        static string SanitizeRunSetting(string str) =>
+            str switch
+            {
+                null => "Standard",
+                "" => "Standard",
+                _ => str[0].ToString().ToUpper() + str.Substring(1).ToLower()
+            };
+
+        return this;
+    }
     
 }

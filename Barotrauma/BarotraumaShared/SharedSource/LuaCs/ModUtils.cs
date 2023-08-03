@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using Barotrauma;
 using Barotrauma.Items.Components;
 using Barotrauma.Networking;
@@ -221,6 +222,58 @@ public static class ModUtils
             }
 
             return ioActionResultState;
+        }
+        
+        /// <summary>
+        /// Gets the RunConfig.xml for the given package located at [cp_root]/CSharp/RunConfig.xml.
+        /// Generates a default config if one is not found. 
+        /// </summary>
+        /// <param name="package">The package to search for.</param>
+        /// <param name="config">RunConfig data.</param>
+        /// <returns>True if a config is loaded, false if one was created.</returns>
+        public static bool GetOrCreateRunConfig(ContentPackage package, out RunConfig config)
+        {
+            string filepath = System.IO.Path.Combine(package.Path, "CSharp", "RunConfig.xml");
+            if (ModUtils.IO.IOActionResultState.Success == ModUtils.IO.GetOrCreateFileText(
+                    filepath, out string fileText, () =>
+                    {
+                        using (StringWriter sw = new StringWriter())
+                        {
+                            XmlSerializer s = new XmlSerializer(typeof(RunConfig));
+                            RunConfig r = new RunConfig().Sanitize();
+                            s.Serialize(sw, r);
+                            return sw.ToString();
+                        }
+                    }))
+            {
+                XmlSerializer s = new XmlSerializer(typeof(RunConfig));
+                try
+                {
+                    using (TextReader tr = new StringReader(fileText))
+                    {
+                        config = (RunConfig)s.Deserialize(tr);
+                    }
+                    // Sanitization
+                    config?.Sanitize();
+
+                    return true;
+                }
+                catch(InvalidOperationException ioe)
+                {
+                    ModUtils.Logging.PrintError($"Error while parsing run config for {package.Name}, using defaults.");
+    #if DEBUG
+                    ModUtils.Logging.PrintError($"Exception: {ioe.Message}. Details: {ioe.InnerException?.Message}");
+    #endif
+                    config = new RunConfig().Sanitize();
+                    return false;
+                }
+            }
+
+            config = new RunConfig().Sanitize();
+
+            return false;
+
+            
         }
 
         public enum IOActionResultState
