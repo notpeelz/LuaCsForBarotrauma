@@ -10,6 +10,7 @@ using System.Runtime.Loader;
 using System.Threading;
 using Barotrauma;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 
 // ReSharper disable EventNeverSubscribedTo.Global
@@ -355,8 +356,17 @@ public static class AssemblyManager
     {
         throw new NotImplementedException();
     }
-    
-    
+
+    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromMemoryAndLocations(
+        IEnumerable<string> filePaths,
+        [NotNull] string compiledAssemblyName,
+        [NotNull] IEnumerable<SyntaxTree> syntaxTree,
+        [NotNull] IEnumerable<MetadataReference> externalMetadataReferences,
+        [NotNull] CSharpCompilationOptions compilationOptions,
+        out LoadedACL loadedAcl)
+    {
+        throw new NotImplementedException();
+    }
 
     internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromLocation(string filePath,
         out LoadedACL loadedAcl)
@@ -660,7 +670,16 @@ public static class AssemblyManager
     public abstract class AssemblyContextLoader : AssemblyLoadContext
     {
         protected bool IsResolving;   //this is to avoid circular dependency lookup.
-
+        // public
+        // ReSharper disable MemberCanBePrivate.Global
+        public Assembly CompiledAssembly { get; private set; }
+        public byte[] CompiledAssemblyImage { get; private set; }
+        public bool IsReady { get; private set; }
+        // ReSharper restore MemberCanBePrivate.Global 
+        // internal
+        private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
+        
+        
         protected AssemblyContextLoader() : base(isCollectible: true)
         {
             
@@ -726,75 +745,104 @@ public static class AssemblyManager
         }
     }
     
-    public class FileAssemblyContextLoader : AssemblyContextLoader
+
+    public class MemoryFileAssemblyContextLoader : AssemblyContextLoader
     {
-        private AssemblyDependencyResolver dependencyResolver;
-
-        public FileAssemblyContextLoader(string mainAssemblyLoadPath)
-        {
-            if (mainAssemblyLoadPath is null)
-                return;
-            dependencyResolver = new AssemblyDependencyResolver(mainAssemblyLoadPath);
-        }
-        
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract")]
-        protected override Assembly Load(AssemblyName assemblyName)
-        {
-            if (IsResolving)
-                return null;    //circular resolution fast exit.
-            
-            string assPath = dependencyResolver.ResolveAssemblyToPath(assemblyName);
-            if (assPath is not null)
-            {
-                IsResolving = false;
-                return LoadFromAssemblyPath(assPath);
-            }
-
-            return base.Load(assemblyName);
-        }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
-        {
-            string libraryPath = dependencyResolver.ResolveUnmanagedDllToPath(unmanagedDllName);
-            if (libraryPath != null)
-                return LoadUnmanagedDllFromPath(libraryPath);
-            return IntPtr.Zero;
-        }
-    }
-
-    public class MemoryAssemblyContextLoader : AssemblyContextLoader
-    {
-        private Assembly CompiledAssembly;
+        // public
+        // ReSharper disable MemberCanBePrivate.Global
+        public Assembly CompiledAssembly { get; private set; }
+        public byte[] CompiledAssemblyImage { get; private set; }
         public bool IsReady { get; private set; }
-        public EmitResult CompilationResult { get; private set; }
-        
-        public MemoryAssemblyContextLoader(string sources, string[] dependenciesFilePaths)
+        // ReSharper restore MemberCanBePrivate.Global 
+        // internal
+        private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
+
+        public MemoryFileAssemblyContextLoader()
         {
             
         }
-
         
+
+        private void LoadFromFiles([NotNull] string[] assemblyFilePaths)
+        {
+            foreach (string filepath in assemblyFilePaths)
+            {
+                if (filepath.IsNullOrWhiteSpace())
+                    continue;
+
+                string sanitizedFilePath = System.IO.Path.GetFullPath(filepath).CleanUpPath();
+                string directoryKey = System.IO.Path.GetDirectoryName(sanitizedFilePath);
+
+                if (!_dependencyResolvers.ContainsKey(directoryKey) || _dependencyResolvers[directoryKey] is null)
+                {
+                    _dependencyResolvers[directoryKey] = new AssemblyDependencyResolver(sanitizedFilePath); // supply the first assembly to be loaded
+                }
+                
+                try
+                {
+                    LoadFromAssemblyPath(filepath.CleanUpPath());
+                }
+                catch (Exception e)
+                {
+#if SERVER
+                    LuaCsLogger.LogError($"Unable to load dependency assembly file at {path} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
+#elif CLIENT
+                         LuaCsLogger.ShowErrorOverlay($"Unable to load dependency assembly file at {filepath} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
+#endif
+                    IsReady = false;
+                }
+            }
+        }
+
+        private void CompileAndLoadAssembly([NotNull] MemoryStream memoryCompilation)
+        {
+            memoryCompilation.Seek(0, SeekOrigin.Begin);   // reset
+            try
+            {
+                CompiledAssembly = LoadFromStream(memoryCompilation);
+                CompiledAssemblyImage = memoryCompilation.ToArray();
+            }
+            catch (Exception e)
+            {
+#if SERVER
+                LuaCsLogger.LogError($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
+#elif CLIENT
+                 LuaCsLogger.ShowErrorOverlay($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
+#endif
+                IsReady = false;
+            }
+        }
         
         protected override Assembly Load(AssemblyName assemblyName)
         {
             if (IsResolving)
                 return null;
 
+            // check self, can be called on load
             if (this.CompiledAssembly is not null
                 && this.CompiledAssembly.FullName is not null
                 && this.CompiledAssembly.FullName.Equals(assemblyName.FullName))
             {
                 return CompiledAssembly;
             }
-            
+
+            foreach (KeyValuePair<string,AssemblyDependencyResolver> pair in _dependencyResolvers)
+            {
+                var ass = pair.Value.ResolveAssemblyToPath(assemblyName);
+                if (ass is null)
+                    continue;
+                IsResolving = false;
+                LoadFromAssemblyPath(ass);
+            }
+
             return base.Load(assemblyName);
         }
 
         private new void Unload()
         {
             CompiledAssembly = null;
+            CompiledAssemblyImage = null;
+            IsReady = false;
             base.Unload();
         }
     }

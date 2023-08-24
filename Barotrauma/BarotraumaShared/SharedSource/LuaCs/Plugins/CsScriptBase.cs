@@ -14,7 +14,7 @@ using System.Runtime.CompilerServices;
 
 namespace Barotrauma
 {
-    public class CsScriptBase : AssemblyManager.MemoryAssemblyContextLoader
+    public class CsScriptBase : AssemblyManager.MemoryFileAssemblyContextLoader
     {
         public const string CsScriptAssembly = "NetScriptAssembly";
 

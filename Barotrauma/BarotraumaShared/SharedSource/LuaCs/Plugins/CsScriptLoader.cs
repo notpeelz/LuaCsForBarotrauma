@@ -188,20 +188,25 @@ namespace Barotrauma
 
         public List<Type> Compile() 
         {
+            // get syntaxtrees from sources in files 
             IEnumerable<SyntaxTree> syntaxTrees = ParseSources();
 
+            // compilation options
             var options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithMetadataImportOptions(MetadataImportOptions.All)
                 .WithOptimizationLevel(OptimizationLevel.Release)
                 .WithAllowUnsafe(true);
 
+            // compile to allow public access to restricted members
             var topLevelBinderFlagsProperty = typeof(CSharpCompilationOptions).GetProperty("TopLevelBinderFlags", BindingFlags.Instance | BindingFlags.NonPublic);
             topLevelBinderFlagsProperty.SetValue(options, (uint)1 << 22);
 
+            // compile
             var compilation = CSharpCompilation.Create(CsScriptAssembly, syntaxTrees, defaultReferences, options);
 
             using (var mem = new MemoryStream())
             {
+                // emit IL
                 var result = compilation.Emit(mem);
                 if (!result.Success)
                 {
@@ -223,6 +228,7 @@ namespace Barotrauma
                 }
                 else
                 {
+                    // success, create in-memory assembly ref from emitted IL
                     mem.Seek(0, SeekOrigin.Begin);
                     Assembly = LoadFromStream(mem);
                 }
