@@ -92,6 +92,46 @@
     <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\RunConfig.cs">
       <Link>SharedSource\LuaCs\Plugins\RunConfig.cs</Link>
     </Compile>
+    <Compile Remove="SharedSource\LuaCs\Plugins\**" />
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\ACsMod.cs">
+      <Link>SharedSource\LuaCs\Plugins\ACsMod.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\ApplicationMode.cs">
+      <Link>SharedSource\LuaCs\Plugins\ApplicationMode.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\AssemblyManager.cs">
+      <Link>SharedSource\LuaCs\Plugins\AssemblyManager.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\AssemblyUtils.cs">
+      <Link>SharedSource\LuaCs\Plugins\AssemblyUtils.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptBase.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptBase.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptLoader.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptLoader.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptManager.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptManager.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\IAssemblyPlugin.cs">
+      <Link>SharedSource\LuaCs\Plugins\IAssemblyPlugin.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\PluginHelper.cs">
+      <Link>SharedSource\LuaCs\Plugins\PluginHelper.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\PluginInfo.cs">
+      <Link>SharedSource\LuaCs\Plugins\PluginInfo.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\RunConfig.cs">
+      <Link>SharedSource\LuaCs\Plugins\RunConfig.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\TargetPlatform.cs">
+      <Link>SharedSource\LuaCs\Plugins\TargetPlatform.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\MemoryFileAssemblyContextLoader.cs">
+      <Link>SharedSource\LuaCs\Plugins\MemoryFileAssemblyContextLoader.cs</Link>
+    </Compile>
   </ItemGroup>
   
   <ItemGroup>
@@ -106,6 +146,7 @@
     <None Remove="libopenal.1.dylib" />
     <None Remove="libSDL2-2.0.0.dylib" />
     <None Remove="libwebm_mem_playback_x64.dylib" />
+    <None Remove="SharedSource\LuaCs\Plugins\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -257,6 +298,9 @@
   <Import Project="../BarotraumaShared/Luatrauma.props" />
   <ItemGroup>
     <None Include="../BarotraumaShared/Luatrauma.props" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Remove="SharedSource\LuaCs\Plugins\**" />
   </ItemGroup>
 
 </Project>

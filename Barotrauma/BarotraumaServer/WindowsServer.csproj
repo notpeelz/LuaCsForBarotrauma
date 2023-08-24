@@ -67,6 +67,42 @@
     <Compile Include="..\BarotraumaShared\**\*.cs" />
     <Compile Remove="..\BarotraumaShared\Content\**\*.cs" />
     <Content Remove="DedicatedServer.exe" />
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\ACsMod.cs">
+      <Link>SharedSource\LuaCs\Plugins\ACsMod.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\ApplicationMode.cs">
+      <Link>SharedSource\LuaCs\Plugins\ApplicationMode.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\AssemblyManager.cs">
+      <Link>SharedSource\LuaCs\Plugins\AssemblyManager.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\AssemblyUtils.cs">
+      <Link>SharedSource\LuaCs\Plugins\AssemblyUtils.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptBase.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptBase.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptLoader.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptLoader.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\CsScriptManager.cs">
+      <Link>SharedSource\LuaCs\Plugins\CsScriptManager.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\IAssemblyPlugin.cs">
+      <Link>SharedSource\LuaCs\Plugins\IAssemblyPlugin.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\PluginHelper.cs">
+      <Link>SharedSource\LuaCs\Plugins\PluginHelper.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\PluginInfo.cs">
+      <Link>SharedSource\LuaCs\Plugins\PluginInfo.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\RunConfig.cs">
+      <Link>SharedSource\LuaCs\Plugins\RunConfig.cs</Link>
+    </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\TargetPlatform.cs">
+      <Link>SharedSource\LuaCs\Plugins\TargetPlatform.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'!='Debug'">

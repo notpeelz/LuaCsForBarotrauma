@@ -348,6 +348,14 @@ public static class AssemblyManager
         }
     }
 
+    public static IEnumerable<LoadedACL> GetAllLoadedACLs()
+    {
+        foreach (KeyValuePair<string,LoadedACL> loadedAcL in LoadedACLs)
+        {
+            yield return loadedAcL.Value;
+        }
+    }
+
     #endregion
 
     #region InternalAPI
@@ -746,112 +754,13 @@ public static class AssemblyManager
     }
     
 
-    public class MemoryFileAssemblyContextLoader : AssemblyContextLoader
-    {
-        // public
-        // ReSharper disable MemberCanBePrivate.Global
-        public Assembly CompiledAssembly { get; private set; }
-        public byte[] CompiledAssemblyImage { get; private set; }
-        public bool IsReady { get; private set; }
-        // ReSharper restore MemberCanBePrivate.Global 
-        // internal
-        private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
-
-        public MemoryFileAssemblyContextLoader()
-        {
-            
-        }
-        
-
-        private void LoadFromFiles([NotNull] string[] assemblyFilePaths)
-        {
-            foreach (string filepath in assemblyFilePaths)
-            {
-                if (filepath.IsNullOrWhiteSpace())
-                    continue;
-
-                string sanitizedFilePath = System.IO.Path.GetFullPath(filepath).CleanUpPath();
-                string directoryKey = System.IO.Path.GetDirectoryName(sanitizedFilePath);
-
-                if (!_dependencyResolvers.ContainsKey(directoryKey) || _dependencyResolvers[directoryKey] is null)
-                {
-                    _dependencyResolvers[directoryKey] = new AssemblyDependencyResolver(sanitizedFilePath); // supply the first assembly to be loaded
-                }
-                
-                try
-                {
-                    LoadFromAssemblyPath(filepath.CleanUpPath());
-                }
-                catch (Exception e)
-                {
-#if SERVER
-                    LuaCsLogger.LogError($"Unable to load dependency assembly file at {path} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
-#elif CLIENT
-                         LuaCsLogger.ShowErrorOverlay($"Unable to load dependency assembly file at {filepath} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
-#endif
-                    IsReady = false;
-                }
-            }
-        }
-
-        private void CompileAndLoadAssembly([NotNull] MemoryStream memoryCompilation)
-        {
-            memoryCompilation.Seek(0, SeekOrigin.Begin);   // reset
-            try
-            {
-                CompiledAssembly = LoadFromStream(memoryCompilation);
-                CompiledAssemblyImage = memoryCompilation.ToArray();
-            }
-            catch (Exception e)
-            {
-#if SERVER
-                LuaCsLogger.LogError($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
-#elif CLIENT
-                 LuaCsLogger.ShowErrorOverlay($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
-#endif
-                IsReady = false;
-            }
-        }
-        
-        protected override Assembly Load(AssemblyName assemblyName)
-        {
-            if (IsResolving)
-                return null;
-
-            // check self, can be called on load
-            if (this.CompiledAssembly is not null
-                && this.CompiledAssembly.FullName is not null
-                && this.CompiledAssembly.FullName.Equals(assemblyName.FullName))
-            {
-                return CompiledAssembly;
-            }
-
-            foreach (KeyValuePair<string,AssemblyDependencyResolver> pair in _dependencyResolvers)
-            {
-                var ass = pair.Value.ResolveAssemblyToPath(assemblyName);
-                if (ass is null)
-                    continue;
-                IsResolving = false;
-                LoadFromAssemblyPath(ass);
-            }
-
-            return base.Load(assemblyName);
-        }
-
-        private new void Unload()
-        {
-            CompiledAssembly = null;
-            CompiledAssemblyImage = null;
-            IsReady = false;
-            base.Unload();
-        }
-    }
+    
     
     // ReSharper disable once NotAccessedPositionalProperty.Global
     public record LoadedACL(string FilePath, 
         List<Type> PluginTypes, 
         List<IAssemblyPlugin> LoadedPlugins,
-        AssemblyContextLoader Acl);
+        MemoryFileAssemblyContextLoader Acl);
 
     public enum AssemblyLoadingSuccessState
     {
