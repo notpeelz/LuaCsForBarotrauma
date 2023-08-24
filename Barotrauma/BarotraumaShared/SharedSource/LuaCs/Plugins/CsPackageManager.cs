@@ -7,13 +7,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using Barotrauma.Steam;
-using FarseerPhysics.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace Barotrauma;
 
-public class CsScriptManager : IDisposable
+public class CsPackageManager : IDisposable
 {
     #region PRIVATE_FUNCDATA
 
@@ -44,7 +43,7 @@ public class CsScriptManager : IDisposable
 
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
     private readonly Dictionary<ContentPackage, List<ContentPackage>> _packagesDependencies = new();
-    private readonly Dictionary<ContentPackage, (AssemblyManager.MemoryFileAssemblyContextLoader, List<AssemblyManager.FileAssemblyContextLoader>)> _loadedCompiledPackageAssemblies = new();
+    private readonly Dictionary<ContentPackage, MemoryFileAssemblyContextLoader> _loadedCompiledPackageAssemblies = new();
     private readonly Dictionary<ContentPackage, ImmutableList<MetadataReference>> _loadedPackageMetadada = new();
 
     #endregion
@@ -63,70 +62,37 @@ public class CsScriptManager : IDisposable
     {
         if (!IsLoaded)
             return;
-        throw new NotImplementedException();
         // send events for cleanup
+        OnDispose?.Invoke();
         // cleanup events
-        // cleanup references
+        if (OnDispose is not null)
+        {
+            foreach (Delegate del in OnDispose.GetInvocationList())
+            {
+                OnDispose -= (del as System.Action);
+            }
+        }
         IsLoaded = false;
+        throw new NotImplementedException();
     }
 
     public void BeginPackageLoading()
     {
         if (IsLoaded)
         {
-            LuaCsLogger.LogError($"{nameof(CsScriptManager)}::{nameof(BeginPackageLoading)}() | Attempted to load packages when already loaded!");
+            LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(BeginPackageLoading)}() | Attempted to load packages when already loaded!");
             return;
         }
-        
+
+        OnDispose += UnloadAll;
+
         // get packages
         // build load order
         // get assemblies from packages
     } 
     
     #region HELPER_FUNCS
-
-    /// <summary>
-    /// Builds a metadata references list from loaded packages and from the default .
-    /// </summary>
-    /// <returns></returns>
-    public IEnumerable<MetadataReference> GenerateMetadataReferencesFromAssemblies()
-    {
-        // loaded assemblies with file refs
-        List<MetadataReference> metadataReferences = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !(a.IsDynamic || string.IsNullOrWhiteSpace(a.Location) || a.Location.Contains("xunit")))
-            .Select(a => MetadataReference.CreateFromFile(a.Location) as MetadataReference)
-            .ToList();
-
-        // in-memory compiled assemblies
-        foreach (var packageAssembly in _loadedCompiledPackageAssemblies)
-        {
-            if (!_loadedPackageMetadada.ContainsKey(packageAssembly.Key) 
-                || _loadedPackageMetadada[packageAssembly.Key] is null 
-                || _loadedPackageMetadada[packageAssembly.Key] == ImmutableList<MetadataReference>.Empty)
-            {
-                // generate metadata
-                if (_loadedCompiledPackageAssemblies[packageAssembly.Key].Item1.IsReady)
-                {
-                    _loadedPackageMetadada[packageAssembly.Key] = packageAssembly.Value.Item1.Assemblies
-                        .Where(a => !a.Location.Contains("xunit"))
-                        .Select(a => MetadataReference.CreateFromImage(
-                            _loadedCompiledPackageAssemblies[packageAssembly.Key].Item1.CompiledAssemblyImage) as MetadataReference)
-                        .ToImmutableList();
-                }
-                else // can't do it
-                {
-                    continue;   // cannot build references from this image since something may have gone wrong.
-                }
-            }
-            metadataReferences.AddRange(_loadedPackageMetadada[packageAssembly.Key]);
-            
-            
-        }
-
-        return metadataReferences;
-    }
-
-    public static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
+    
     
     #endregion
 
@@ -134,12 +100,19 @@ public class CsScriptManager : IDisposable
 
     #region INTERNALS
 
+    private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
     
-    private static IEnumerable<MetadataReference> GetMetadataReferencesFromLoadedScripts()
+    private void ProcessAndLoadPackagesList(IEnumerable<ContentPackage> packages)
     {
         throw new NotImplementedException();
     }
 
+    private void UnloadAll()
+    {
+        // tell plugin manager to unload all plugins
+        // tell assembly manager to unload all 
+    }
+    
 
     /// <summary>
     /// Builds a list of ContentPackage dependencies for each of the packages in the list. Note: All dependencies must be included in the provided list of packages.

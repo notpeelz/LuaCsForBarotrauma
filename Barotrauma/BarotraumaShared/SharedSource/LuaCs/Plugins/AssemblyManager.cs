@@ -350,10 +350,19 @@ public static class AssemblyManager
 
     public static IEnumerable<LoadedACL> GetAllLoadedACLs()
     {
-        foreach (KeyValuePair<string,LoadedACL> loadedAcL in LoadedACLs)
+        try
         {
-            yield return loadedAcL.Value;
+            OpsLockLoaded.EnterReadLock();
+            foreach (KeyValuePair<string,LoadedACL> loadedAcL in LoadedACLs)
+            {
+                yield return loadedAcL.Value;
+            }
         }
+        finally
+        {
+            OpsLockLoaded.ExitReadLock();
+        }
+        
     }
 
     #endregion
@@ -771,6 +780,7 @@ public static class AssemblyManager
         InvalidAssembly,
         NoAssemblyFound,
         PluginInstanceFailure,
+        CannotLoadFromStream,
         Success
     }
 

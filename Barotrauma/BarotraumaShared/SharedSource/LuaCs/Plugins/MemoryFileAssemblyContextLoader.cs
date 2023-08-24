@@ -15,6 +15,11 @@ using Microsoft.CodeAnalysis.Emit;
 
 namespace Barotrauma;
 
+/// <summary>
+/// AssemblyLoadContext to compile from syntax trees in memory and to load from disk/file. Provides dependency resolution.
+/// [IMPORTANT] Only supports 1 in-memory compiled assembly at a time. Use more instances if you need more.
+/// [IMPORTANT] All file assemblies required for the compilation of syntax trees should be loaded first.
+/// </summary>
 public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 {
     // public
@@ -26,7 +31,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
     protected bool IsResolving;   //this is to avoid circular dependency lookup.
     
-    public MemoryFileAssemblyContextLoader()
+    public MemoryFileAssemblyContextLoader() : base(isCollectible: true)
     {
         
     }
@@ -36,8 +41,12 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     /// 
     /// </summary>
     /// <param name="assemblyFilePaths"></param>
-    public void LoadFromFiles([NotNull] string[] assemblyFilePaths)
+    public AssemblyManager.AssemblyLoadingSuccessState LoadFromFiles([NotNull] IEnumerable<string> assemblyFilePaths)
     {
+        if (assemblyFilePaths is null)
+            throw new ArgumentNullException(
+                $"{nameof(MemoryFileAssemblyContextLoader)}::{nameof(LoadFromFiles)}() | The supplied filepath list is null.");
+        
         foreach (string filepath in assemblyFilePaths)
         {
             // path verification
@@ -60,25 +69,44 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             catch (Exception e)
             {
 #if SERVER
-                LuaCsLogger.LogError($"Unable to load dependency assembly file at {path} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
+                LuaCsLogger.LogError($"Unable to load dependency assembly file at {filepath.CleanUpPath()} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
 #elif CLIENT
                 LuaCsLogger.ShowErrorOverlay($"Unable to load dependency assembly file at {filepath} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
 #endif
             }
         }
+
+        return AssemblyManager.AssemblyLoadingSuccessState.Success;
     }
 
 
-    public bool CompileAndLoadScriptAssembly(
+    /// <summary>
+    /// Compiles the supplied syntaxtrees and options into an in-memory assembly image.
+    /// Builds metadata from loaded assemblies, only supply your own if you have in-memory images not managed by the
+    /// AssemblyManager class. 
+    /// </summary>
+    /// <param name="assemblyName">Name of the assembly. Must be supplied for in-memory assemblies.</param>
+    /// <param name="syntaxTrees">Syntax trees to compile into the assembly.</param>
+    /// <param name="externMetadataReferences">Metadata to be used for compilation.
+    /// [IMPORTANT] This method builds metadata from loaded assemblies, only supply your own if you have in-memory
+    /// images not managed by the AssemblyManager class.</param>
+    /// <param name="compilationOptions">CSharp compilation options. This method automatically adds the 'IgnoreAccessChecks' property for compilation.</param>
+    /// <param name="compilationMessages">Will contain any diagnostic messages for compilation failure.</param>
+    /// <returns>Success state of the operation.</returns>
+    /// <exception cref="ArgumentNullException">Throws exception if any of the required arguments are null.</exception>
+    public AssemblyManager.AssemblyLoadingSuccessState CompileAndLoadScriptAssembly(
         [NotNull] string assemblyName,
         [NotNull] IEnumerable<SyntaxTree> syntaxTrees,
         IEnumerable<MetadataReference> externMetadataReferences,
         [NotNull] CSharpCompilationOptions compilationOptions,
-        out string compilationMessages,
-        out Assembly compiledAssembly)
+        out string compilationMessages)
     {
         compilationMessages = "";
-        compiledAssembly = null;
+
+        if (this.CompiledAssembly is not null)
+        {
+            return AssemblyManager.AssemblyLoadingSuccessState.AlreadyLoaded;
+        }
 
         // verifications
         if (assemblyName.IsNullOrWhiteSpace())
@@ -125,28 +153,27 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
                 compilationMessages += $"\n{diagnostic}";
             }
 
-            return false;
+            return AssemblyManager.AssemblyLoadingSuccessState.InvalidAssembly;
         }
 
+        // read compiled assembly from memory stream into an in-memory assembly & image
         memoryCompilation.Seek(0, SeekOrigin.Begin);   // reset
         try
         {
             CompiledAssembly = LoadFromStream(memoryCompilation);
             CompiledAssemblyImage = memoryCompilation.ToArray();
-            compilationMessages = "success";
-            compiledAssembly = CompiledAssembly;
         }
         catch (Exception e)
         {
 #if SERVER
-                LuaCsLogger.LogError($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
+            LuaCsLogger.LogError($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
 #elif CLIENT
             LuaCsLogger.ShowErrorOverlay($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
 #endif
-            return false;
+            return AssemblyManager.AssemblyLoadingSuccessState.CannotLoadFromStream;
         }
 
-        return true;
+        return AssemblyManager.AssemblyLoadingSuccessState.Success;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -163,7 +190,6 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             // resolve self collection
             Assembly ass = this.Assemblies.FirstOrDefault(a =>
                 a.FullName is not null && a.FullName.Equals(assemblyName.FullName), null);
-
             if (ass is not null)
                 return ass;
 
@@ -193,7 +219,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
                     // LoadFromAssemblyName throws if it fails.
                 }
             }
-
+            
             ass = AssemblyLoadContext.Default.LoadFromAssemblyName(assemblyName);
             if (ass is not null)
                 return ass;
