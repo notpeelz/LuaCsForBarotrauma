@@ -110,7 +110,7 @@ public static class PluginHelper
         lock (_OpsLock)
         {
             int count = 100;
-            AssemblyManager.BeginDispose();
+            AssemblyManager.TryBeginDispose();
             while (!AssemblyManager.FinalizeDispose() && count > 0)
             {
                 count--;
@@ -155,7 +155,7 @@ public static class PluginHelper
             foreach (string dllPath in pluginDllPaths)
             {
                 AssemblyManager.AssemblyLoadingSuccessState alss
-                    = AssemblyManager.LoadAssembliesAndPluginTypesFromLocation(dllPath, out var loadedAcl);
+                    = AssemblyManager.LoadAssembliesFromLocation(dllPath, out var loadedAcl);
                 if (alss == AssemblyManager.AssemblyLoadingSuccessState.Success)
                 {
                     if (loadedAcl is not null)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -26,16 +27,7 @@ namespace Barotrauma;
 public static class AssemblyManager
 {
     #region ExternalAPI
-
-    /// <summary>
-    /// Called after a plugin has been loaded (OnLoadComplete executed on the plugin). 
-    /// </summary>
-    public static event Action<IAssemblyPlugin> OnPluginLoaded;
-
-    /// <summary>
-    /// Called right before a plugin is about to be unloaded. Use this to cleanup any interop you have with the plugin.
-    /// </summary>
-    public static event Action<IAssemblyPlugin> OnPluginUnloading; 
+    
     /// <summary>
     /// Called when an assembly is loaded.
     /// </summary>
@@ -53,9 +45,9 @@ public static class AssemblyManager
     public static event Action<string, Exception> OnException;
 
     /// <summary>
-    /// For unloading issue debugging. Called whenever FileAssemblyContextLoader [load context] is unloaded. 
+    /// For unloading issue debugging. Called whenever MemoryFileAssemblyContextLoader [load context] is unloaded. 
     /// </summary>
-    public static event Action<string> OnACLUnload; 
+    public static event Action<Guid> OnACLUnload; 
     
     #if DEBUG
 
@@ -63,7 +55,7 @@ public static class AssemblyManager
     /// [DEBUG ONLY]
     /// Returns a list of the current unloading ACLs. 
     /// </summary>
-    public static ImmutableList<WeakReference<AssemblyContextLoader>> StillUnloadingACLs
+    public static ImmutableList<WeakReference<MemoryFileAssemblyContextLoader>> StillUnloadingACLs
     {
         get
         {
@@ -105,84 +97,7 @@ public static class AssemblyManager
             }
         }
     }
-
-    /// <summary>
-    /// Whether or not loaded assemblies have their plugins instantiated.
-    /// </summary>
-    public static bool PluginsLoaded { get; private set; }
-
-    /// <summary>
-    /// [BLOCKING]
-    /// Loads an assembly from the given file path and searches it for IAssemblyPlugin classes.
-    /// NOTE: if [instancePlugins] is false, all plugins will have to be reloaded for the plugins to be instanced later.
-    /// If [PluginsLoaded] is false, no loading will be allowed to take place.
-    /// </summary>
-    /// <param name="absFilePath">Absolute path to the assembly.</param>
-    /// <param name="instancePlugins">Whether or not an IAssemblyPlugin types should be instanced,</param>
-    /// <returns>Loading Operation Success Status.</returns>
-    public static AssemblyLoadingSuccessState LoadAssembly(string absFilePath, bool instancePlugins = false)
-    {
-        AssemblyLoadingSuccessState alss = LoadAssembliesAndPluginTypesFromLocation(absFilePath, out var loadedAcl);
-        if (alss == AssemblyLoadingSuccessState.Success && PluginsLoaded && instancePlugins)
-        {
-            if (loadedAcl is null)
-                return AssemblyLoadingSuccessState.ACLLoadFailure;
-            OpsLockLoaded.EnterWriteLock();
-            try
-            {
-                foreach (Type type in loadedAcl.PluginTypes)
-                {
-                    IAssemblyPlugin plugin = (IAssemblyPlugin)Activator.CreateInstance(type);
-                    if (plugin is null)
-                        return AssemblyLoadingSuccessState.PluginInstanceFailure;
-                    plugin.Initialize();
-                    loadedAcl.LoadedPlugins.Add(plugin);
-                }
-
-                foreach (IAssemblyPlugin plugin in loadedAcl.LoadedPlugins)
-                {
-                    plugin.OnLoadCompleted();
-                }
-            }
-            finally
-            {
-                OpsLockLoaded.ExitWriteLock();
-            }
-        }
-        return alss;
-    }
-
-    /// <summary>
-    /// [BLOCKING]
-    /// Deactivates the given plugin.
-    /// WARNING: The plugin cannot be reloaded with reloading ALL plugins! This is because there isn't any guarantee
-    /// that the object instance has been unloaded due to strong references other plugins might have to it.
-    /// </summary>
-    /// <param name="plugin"></param>
-    [MethodImpl(MethodImplOptions.Synchronized | MethodImplOptions.NoInlining)]
-    public static void UnloadPlugin(IAssemblyPlugin plugin)
-    {
-        OpsLockLoaded.EnterWriteLock();
-        try
-        {
-            LoadedACL acl = null;
-            foreach (KeyValuePair<string, LoadedACL> loadedAcl in LoadedACLs)
-            {
-                if (loadedAcl.Value.LoadedPlugins.Contains(plugin))
-                {
-                    acl = loadedAcl.Value;
-                    break;
-                }
-            }
-
-            plugin.Dispose();
-            acl?.LoadedPlugins.Remove(plugin);
-        }
-        finally
-        {
-            OpsLockLoaded.ExitWriteLock();
-        }
-    }
+    
     
     /// <summary>
     /// Allows iteration over all non-interface types in all loaded assemblies in the AsmMgr that are assignable to the given type (IsAssignableFrom).
@@ -192,29 +107,16 @@ public static class AssemblyManager
     public static IEnumerable<Type> GetSubTypesInLoadedAssemblies<T>()
     {
         Type targetType = typeof(T);
-        
-        foreach (var type in typeof(AssemblyManager).Assembly.GetSafeTypes().Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface))   
-        {
-            yield return type;
-        }
 
         OpsLockLoaded.EnterReadLock();
         try
         {
-            foreach (KeyValuePair<string, LoadedACL> loadedAcl in LoadedACLs)
-            {
-                if (loadedAcl.Value.Acl is not null)
-                {
-                    foreach (Assembly aclAssembly in loadedAcl.Value.Acl.Assemblies)
-                    {
-                        foreach (var type in aclAssembly.GetSafeTypes()
-                                     .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface))
-                        {
-                            yield return type;
-                        }
-                    }
-                }
-            }
+            return typeof(AssemblyManager).Assembly.GetSafeTypes()
+                .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface)
+                .Concat(LoadedACLs
+                    .SelectMany(kvp => kvp.Value.GetAssembliesTypes()
+                        .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface)))
+                .ToImmutableList();
         }
         finally
         {
@@ -229,27 +131,15 @@ public static class AssemblyManager
     /// <returns>An Enumerator for matching types.</returns>
     public static IEnumerable<Type> GetMatchingTypesInLoadedAssemblies(string name)
     {
-        foreach (var type in typeof(AssemblyManager).Assembly.GetSafeTypes().Where(t => t.Name.Equals(name) && !t.IsInterface))   
-        {
-            yield return type;
-        }
-
         OpsLockLoaded.EnterReadLock();
         try
         {
-            foreach (KeyValuePair<string,LoadedACL> loadedAcl in LoadedACLs)
-            {
-                if (loadedAcl.Value.Acl is not null)
-                {
-                    foreach (Assembly aclAssembly in loadedAcl.Value.Acl.Assemblies)
-                    {
-                        foreach (var type in aclAssembly.GetSafeTypes().Where(t => t.Name.Equals(name) && !t.IsInterface))
-                        {
-                            yield return type;
-                        }
-                    }
-                }
-            }
+            return typeof(AssemblyManager).Assembly.GetSafeTypes()
+                .Where(t => t.Name.Equals(name) && !t.IsInterface)
+                .Concat(LoadedACLs
+                    .SelectMany(kvp => kvp.Value.GetAssembliesTypes()
+                        .Where(t => t.Name.Equals(name) && !t.IsInterface)))
+                .ToImmutableList();
         }
         finally
         {
@@ -263,56 +153,20 @@ public static class AssemblyManager
     /// <returns>An Enumerator for iteration.</returns>
     public static IEnumerable<Type> GetAllTypesInLoadedAssemblies()
     {
-        foreach (var type in typeof(AssemblyManager).Assembly.GetSafeTypes())   
-        {
-            yield return type;
-        }
-
         OpsLockLoaded.EnterReadLock();
         try
         {
-            foreach (KeyValuePair<string,LoadedACL> loadedAcl in LoadedACLs)
-            {
-                if (loadedAcl.Value.Acl is not null)
-                {
-                    foreach (Assembly aclAssembly in loadedAcl.Value.Acl.Assemblies)
-                    {
-                        foreach (var type in aclAssembly.GetSafeTypes())
-                        {
-                            yield return type;
-                        }
-                    }
-                }
-            }
+            return typeof(AssemblyManager).Assembly.GetSafeTypes()
+                .Concat(LoadedACLs
+                    .SelectMany(kvp => kvp.Value.GetAssembliesTypes()))
+                .ToImmutableList();
         }
         finally
         {
             OpsLockLoaded.ExitReadLock();
         }
     }
-
-    /// <summary>
-    /// Allows iteration over the list of loaded plugins.
-    /// </summary>
-    /// <returns>Enumerator for a collection of active plugins as Tuple (Plugin Info, Plugin Instance)</returns>
-    public static IEnumerable<(PluginInfo, IAssemblyPlugin)> GetActivePlugins()
-    {
-        OpsLockLoaded.EnterReadLock();
-        try
-        {
-            foreach (KeyValuePair<string,LoadedACL> loadedAcl in LoadedACLs)
-            {
-                foreach (IAssemblyPlugin plugin in loadedAcl.Value.LoadedPlugins)
-                {
-                    yield return (plugin.GetPluginInfo(), plugin);
-                }
-            }
-        }
-        finally
-        {
-            OpsLockLoaded.ExitReadLock();
-        }
-    }
+    
     
     /// <summary>
     /// Gets all types in the given assembly. Handles invalid type scenarios.
@@ -353,10 +207,7 @@ public static class AssemblyManager
         try
         {
             OpsLockLoaded.EnterReadLock();
-            foreach (KeyValuePair<string,LoadedACL> loadedAcL in LoadedACLs)
-            {
-                yield return loadedAcL.Value;
-            }
+            return LoadedACLs.Select(kvp => kvp.Value).ToImmutableList();
         }
         finally
         {
@@ -369,240 +220,113 @@ public static class AssemblyManager
 
     #region InternalAPI
 
-    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromSources(SyntaxTree sources, string[] dependenciesFilePaths = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromMemoryAndLocations(
-        IEnumerable<string> filePaths,
-        [NotNull] string compiledAssemblyName,
-        [NotNull] IEnumerable<SyntaxTree> syntaxTree,
-        [NotNull] IEnumerable<MetadataReference> externalMetadataReferences,
-        [NotNull] CSharpCompilationOptions compilationOptions,
-        out LoadedACL loadedAcl)
-    {
-        throw new NotImplementedException();
-    }
-
-    internal static AssemblyLoadingSuccessState LoadAssembliesAndPluginTypesFromLocation(string filePath,
-        out LoadedACL loadedAcl)
-    {
-        loadedAcl = null;
-        string vAssemblyName = Path.GetFileName(filePath);
-
-        OpsLockLoaded.EnterReadLock();
-        try
-        {
-            // Check if the assembly is already loaded in an ACL, most likely due to it being a dependency.
-            foreach (var loadedAlc in LoadedACLs)
-            {
-                if (loadedAlc.Value.Acl is not null)
-                {
-                    foreach (Assembly ass in loadedAlc.Value.Acl.Assemblies)
-                    {
-                        if (ass.FullName?.ToLower().Contains(vAssemblyName.ToLower()) ?? false)
-                        {
-                            return AssemblyLoadingSuccessState.AlreadyLoaded;
-                        }
-                    }
-                }
-            }
-        }
-        finally
-        {
-            OpsLockLoaded.ExitReadLock();
-        }
-
-        OpsLockLoaded.EnterWriteLock();
-        try
-        {
-            try
-            {
-                FileAssemblyContextLoader acl = new FileAssemblyContextLoader(filePath);
-                acl.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(filePath)));
-                LoadedACL lc = new LoadedACL(
-                    filePath,
-                    new List<Type>(), //types that impl IAssemblyPlugin  
-                    new List<IAssemblyPlugin>(), //loaded plugins from this assembly, none right now
-                    acl);
-
-                foreach (Assembly aclAssembly in acl.Assemblies)
-                {
-                    OnAssemblyLoaded?.Invoke(aclAssembly);
-                    var r = GetPluginTypesFromAssembly<IAssemblyPlugin>(aclAssembly);
-                    if (r is not null)
-                        lc.PluginTypes?.AddRange(r);
-                }
-
-                LoadedACLs.Add(filePath, lc);
-                loadedAcl = lc;
-                return AssemblyLoadingSuccessState.Success;
-
-            }
-            catch (ArgumentNullException ane)
-            {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<ArgNull>.",
-                    ane);
-                return AssemblyLoadingSuccessState.BadFilePath;
-            }
-            catch (ArgumentException ae)
-            {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<Argument>.",
-                    ae);
-                return AssemblyLoadingSuccessState.BadFilePath;
-            }
-            catch (FileLoadException fle)
-            {
-                OnException?.Invoke($"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<FileLoad>.",
-                    fle);
-                return AssemblyLoadingSuccessState.CannotLoadFile;
-            }
-            catch (FileNotFoundException fne)
-            {
-                OnException?.Invoke(
-                    $"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<FileNotFound>.", fne);
-                return AssemblyLoadingSuccessState.NoAssemblyFound;
-            }
-            catch (BadImageFormatException bfe)
-            {
-                OnException?.Invoke(
-                    $"AssemblyManager::LoadAssembliesAndPluginTypesFromLocation() | EXCEPTION<BadAssemblyFile>.", bfe);
-                return AssemblyLoadingSuccessState.InvalidAssembly;
-            }
-        }
-        finally
-        {
-            OpsLockLoaded.ExitWriteLock();
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static bool LoadPlugins(out List<PluginInfo> pInfo)
-    {
-        pInfo = new();
-
-        if (PluginsLoaded)
-            UnloadPlugins();
-        
-        OpsLockLoaded.EnterWriteLock();
-        try
-        {
-            if (IsCurrentlyUnloading)
-                return false;
-
-            foreach (var loadedAcl in LoadedACLs)
-            {
-                foreach (Type type in loadedAcl.Value.PluginTypes)
-                {
-                    try
-                    {
-                        IAssemblyPlugin plugin = (IAssemblyPlugin)Activator.CreateInstance(type);
-                        if (plugin is not null)
-                        {
-                            plugin.Initialize();
-                            pInfo.Add(plugin.GetPluginInfo());
-                            loadedAcl.Value.LoadedPlugins.Add(plugin);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        throw;
-                    }
-                }
-
-                foreach (IAssemblyPlugin plugin in loadedAcl.Value.LoadedPlugins)
-                {
-                    plugin.OnLoadCompleted();
-                    OnPluginLoaded?.Invoke(plugin);
-                }
-            }
-
-            PluginsLoaded = true;
-        }
-        finally
-        {
-            OpsLockLoaded.ExitWriteLock();
-        }
-
-        return true;
-    }
-
     /// <summary>
-    /// Unloads all active plugins.
+    /// Used by content package and plugin management to stop unloading of a given ACL until all plugins have gracefully closed.
     /// </summary>
-    /// <returns></returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static bool UnloadPlugins()
-    {
-        OpsLockLoaded.EnterWriteLock();
-        try
-        {
-            if (IsCurrentlyUnloading)
-                return false;
+    internal static event System.Func<LoadedACL, bool> IsReadyToUnloadACL;
 
-            foreach (KeyValuePair<string, LoadedACL> loadedAcl in LoadedACLs)
+    internal static AssemblyLoadingSuccessState LoadAssemblyFromMemory([NotNull] string compiledAssemblyName,
+        [NotNull] IEnumerable<SyntaxTree> syntaxTree,
+        IEnumerable<MetadataReference> externalMetadataReferences,
+        [NotNull] CSharpCompilationOptions compilationOptions,
+        ref Guid id)
+    {
+        // validation
+        if (compiledAssemblyName.IsNullOrWhiteSpace())
+            return AssemblyLoadingSuccessState.BadName;
+        
+        if (!GetOrCreateACL(id, out var acl))
+            return AssemblyLoadingSuccessState.ACLLoadFailure;
+
+        id = acl.Id;    // pass on true id returned
+        
+        // this acl is already hosting an in-memory assembly
+        if (acl.Acl.CompiledAssembly is not null)
+            return AssemblyLoadingSuccessState.AlreadyLoaded;
+
+        // compile
+        var state = acl.Acl.CompileAndLoadScriptAssembly(compiledAssemblyName, syntaxTree, externalMetadataReferences,
+            compilationOptions, out var messages);
+        
+        // get types
+        if (state is AssemblyLoadingSuccessState.Success)
+            acl.SafeRebuildTypesList();
+
+        return state;
+    }
+
+    
+    internal static AssemblyLoadingSuccessState LoadAssembliesFromLocations([NotNull] IEnumerable<string> filePaths,
+        ref Guid id)
+    {
+        // checks
+        if (filePaths is null)
+            throw new ArgumentNullException(
+                $"{nameof(AssemblyManager)}::{nameof(LoadAssembliesFromLocations)}() | file paths supplied is null!");
+        
+        ImmutableList<string> assemblyFilePaths = filePaths.ToImmutableList();  // copy the list before loading
+        
+        if (!assemblyFilePaths.Any())
+            throw new ArgumentNullException(
+                $"{nameof(AssemblyManager)}::{nameof(LoadAssembliesFromLocations)}() | file paths supplied is empty!");
+        
+        if (GetOrCreateACL(id, out var loadedAcl))
+        {
+            var state = loadedAcl.Acl.LoadFromFiles(assemblyFilePaths);
+            // if failure, we dispose of the acl
+            if (state != AssemblyLoadingSuccessState.Success)
             {
-                foreach (IAssemblyPlugin plugin in loadedAcl.Value.LoadedPlugins)
-                {
-                    OnPluginUnloading?.Invoke(plugin);
-                    plugin.Dispose();
-                }
-
-                loadedAcl.Value.LoadedPlugins.Clear();
+                DisposeACL(loadedAcl.Id);
+                return state;
             }
-
-            PluginsLoaded = false;
-        }
-        finally
-        {
-            OpsLockLoaded.ExitWriteLock();
+            // build types list
+            loadedAcl.SafeRebuildTypesList();
+            return state;
         }
 
-        return true;
+        return AssemblyLoadingSuccessState.ACLLoadFailure;
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static bool ReloadAllPlugins(ref List<PluginInfo> pluginInfo)
-    {
-        if (!UnloadPlugins())
-            return false;
-        return LoadPlugins(out pluginInfo);
-    }
 
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.Synchronized)]
-    internal static void BeginDispose()
+    internal static bool TryBeginDispose()
     {
-        OpsLockLoaded.EnterWriteLock();
-        OpsLockUnloaded.EnterWriteLock();
         try
         {
-            foreach (KeyValuePair<string, LoadedACL> loadedAcl in LoadedACLs)
+            OpsLockLoaded.EnterWriteLock();
+            OpsLockUnloaded.EnterWriteLock();
+            
+            foreach (KeyValuePair<Guid, LoadedACL> loadedAcl in LoadedACLs)
             {
-                foreach (IAssemblyPlugin plugin in loadedAcl.Value.LoadedPlugins)
-                {
-                    OnPluginUnloading?.Invoke(plugin);
-                    plugin.Dispose();
-                }
-
-                PluginsLoaded = false;
-                loadedAcl.Value.LoadedPlugins.Clear();
-                loadedAcl.Value.PluginTypes.Clear();
                 if (loadedAcl.Value.Acl is not null)
                 {
+                    foreach (Delegate del in IsReadyToUnloadACL.GetInvocationList())
+                    {
+                        if (del is System.Func<LoadedACL, bool> { } func)
+                        {
+                            if (!func.Invoke(loadedAcl.Value))
+                                return false; // Not ready, exit
+                        }
+                    }
+
                     foreach (Assembly assembly in loadedAcl.Value.Acl.Assemblies)
                     {
                         OnAssemblyUnloading?.Invoke(assembly);
                     }
-                    
-                    UnloadingACLs.Add(new WeakReference<AssemblyContextLoader>(loadedAcl.Value.Acl, true));
+
+                    UnloadingACLs.Add(new WeakReference<MemoryFileAssemblyContextLoader>(loadedAcl.Value.Acl, true));
                     loadedAcl.Value.Acl.Unload();
-                    OnACLUnload?.Invoke(loadedAcl.Value.Acl.Name ?? string.Empty);
+                    OnACLUnload?.Invoke(loadedAcl.Value.Id);
                 }
             }
 
             LoadedACLs.Clear();
+            return true;
+        }
+        catch
+        {
+            // should never happen
+            return false;
         }
         finally
         {
@@ -611,6 +335,7 @@ public static class AssemblyManager
         }
     }
 
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static bool FinalizeDispose()
     {
@@ -618,8 +343,8 @@ public static class AssemblyManager
         OpsLockUnloaded.EnterUpgradeableReadLock();
         try
         {
-            List<WeakReference<AssemblyContextLoader>> toRemove = new();
-            foreach (WeakReference<AssemblyContextLoader> weakReference in UnloadingACLs)
+            List<WeakReference<MemoryFileAssemblyContextLoader>> toRemove = new();
+            foreach (WeakReference<MemoryFileAssemblyContextLoader> weakReference in UnloadingACLs)
             {
                 if (!weakReference.TryGetTarget(out _))
                 {
@@ -632,7 +357,7 @@ public static class AssemblyManager
                 OpsLockUnloaded.EnterWriteLock();
                 try
                 {
-                    foreach (WeakReference<AssemblyContextLoader> reference in toRemove)
+                    foreach (WeakReference<MemoryFileAssemblyContextLoader> reference in toRemove)
                     {
                         UnloadingACLs.Remove(reference);
                     }
@@ -651,125 +376,143 @@ public static class AssemblyManager
 
         return isUnloaded;
     }
+    
+    
+    // acl crud
 
+    /// <summary>
+    /// Gets or creates an AssemblyCtxLoader for the given ID. Creates if the ID is empty or no ACL can be found.
+    /// [IMPORTANT] After calling this method, the id you use should be taken from the acl container (acl.Id). 
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="acl"></param>
+    /// <returns>Should only return false if an error occurs.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool GetOrCreateACL(Guid id, out LoadedACL acl)
+    {
+        OpsLockLoaded.EnterUpgradeableReadLock();
+        try
+        {
+            if (id.Equals(Guid.Empty) || !LoadedACLs.ContainsKey(id) || LoadedACLs[id] is null)
+            {
+                OpsLockLoaded.EnterWriteLock();
+                try
+                {
+                    id = Guid.NewGuid();
+                    acl = new LoadedACL(id);
+                    LoadedACLs[id] = acl;
+                    return true;
+                }
+                finally
+                {
+                    OpsLockLoaded.ExitWriteLock();
+                }
+            }
+            else
+            {
+                acl = LoadedACLs[id];
+                return true;
+            }
 
+        }
+        catch
+        {
+            // should never happen but in-case
+            acl = null;
+            return false;
+        }
+        finally
+        {
+            OpsLockLoaded.ExitUpgradeableReadLock();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool DisposeACL(Guid id)
+    {
+        OpsLockLoaded.EnterWriteLock();
+        OpsLockUnloaded.EnterWriteLock();
+        try
+        {
+            if (id.Equals(Guid.Empty) || !LoadedACLs.ContainsKey(id) || LoadedACLs[id] is null)
+            {
+                return false; // nothing to dispose of
+            }
+
+            var acl = LoadedACLs[id];
+
+            foreach (Assembly assembly in acl.Acl.Assemblies)
+            {
+                OnAssemblyUnloading?.Invoke(assembly);
+            }
+
+            UnloadingACLs.Add(new WeakReference<MemoryFileAssemblyContextLoader>(acl.Acl, true));
+            acl.Acl.Unload();
+            OnACLUnload?.Invoke(acl.Id);
+
+            return true;
+        }
+        catch
+        {
+            // should never happen
+            return false;
+        }
+        finally
+        {
+            OpsLockLoaded.ExitWriteLock();
+            OpsLockUnloaded.ExitWriteLock();
+        }
+    }
     
     #endregion
 
     #region Data
 
-    private static readonly Dictionary<string, LoadedACL> LoadedACLs = new();
-    private static readonly List<WeakReference<AssemblyContextLoader>> UnloadingACLs= new();
+    private static readonly ConcurrentDictionary<Guid, LoadedACL> LoadedACLs = new();
+    private static readonly List<WeakReference<MemoryFileAssemblyContextLoader>> UnloadingACLs= new();
     private static readonly ReaderWriterLockSlim OpsLockLoaded = new ReaderWriterLockSlim();
     private static readonly ReaderWriterLockSlim OpsLockUnloaded = new ReaderWriterLockSlim();
 
     #endregion
 
-    #region FunctionsData
-
-    private static List<Type> GetPluginTypesFromAssembly<T>(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetSafeTypes().Where(t => typeof(T).IsAssignableFrom(t)).ToList();
-        }
-        catch (Exception e)
-        {
-            OnException?.Invoke($"AssemblyManager::GetPluginTypesFromAssembly() | ERROR: AssemblyName: {assembly.FullName}.", e);
-            return null;
-        }
-    }
-    
-    #endregion
-
     #region TypeDefs
+    
 
-    public abstract class AssemblyContextLoader : AssemblyLoadContext
+    public sealed class LoadedACL
     {
-        protected bool IsResolving;   //this is to avoid circular dependency lookup.
-        // public
-        // ReSharper disable MemberCanBePrivate.Global
-        public Assembly CompiledAssembly { get; private set; }
-        public byte[] CompiledAssemblyImage { get; private set; }
-        public bool IsReady { get; private set; }
-        // ReSharper restore MemberCanBePrivate.Global 
-        // internal
-        private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
-        
-        
-        protected AssemblyContextLoader() : base(isCollectible: true)
+        public readonly Guid Id;
+        private readonly List<Type> AssembliesTypes;
+        public readonly MemoryFileAssemblyContextLoader Acl;
+
+        internal LoadedACL(Guid id)
         {
-            
+            this.Id = id;
+            this.Acl = new();
+            this.AssembliesTypes = new();
         }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract")]
-        protected override Assembly Load(AssemblyName assemblyName)
+        public IEnumerable<Type> GetAssembliesTypes() => AssembliesTypes;
+        
+        /// <summary>
+        /// Rebuild the list of types from assemblies loaded in the AsmCtxLoader.
+        /// </summary>
+        internal void SafeRebuildTypesList()
         {
-            if (IsResolving)
-                return null;    //circular resolution fast exit.
-
+            // Do not allow any unloading to occur while rebuilding this list.
+            OpsLockLoaded.EnterReadLock();
             try
             {
-                IsResolving = true;
-
-                // resolve self collection
-                Assembly ass = this.Assemblies.FirstOrDefault(a =>
-                    a.FullName is not null && a.FullName.Equals(assemblyName.FullName), null);
-
-                if (ass is not null)
-                    return ass;
-                
-                try
+                AssembliesTypes.Clear();
+                foreach (Assembly assembly in Acl.Assemblies.ToImmutableList())
                 {
-                    // TODO: Remove, replaced by memory load contexts
-                    ass = GameMain.LuaCs.CsScriptLoader.LoadFromAssemblyName(assemblyName);
-                    if (ass is not null)
-                        return ass;
+                    AssembliesTypes.AddRange(assembly.GetSafeTypes());
                 }
-                catch
-                {
-                    // LoadFromAssemblyName throws if it fails.
-                }
-                
-                //try resolve against other loaded alcs
-                foreach (var loadedAcL in LoadedACLs)
-                {
-                    if (loadedAcL.Value.Acl is null) continue;
-                    
-                    try
-                    {
-                        ass = loadedAcL.Value.Acl.LoadFromAssemblyName(assemblyName);
-                        if (ass is not null)
-                            return ass;
-                    }
-                    catch
-                    {
-                        // LoadFromAssemblyName throws if it fails.
-                    }
-                }
-
-                ass = AssemblyLoadContext.Default.LoadFromAssemblyName(assemblyName);
-                if (ass is not null)
-                    return ass;
             }
             finally
             {
-                IsResolving = false;
+                OpsLockLoaded.ExitReadLock();
             }
-            
-            return null;
         }
     }
-    
-
-    
-    
-    // ReSharper disable once NotAccessedPositionalProperty.Global
-    public record LoadedACL(string FilePath, 
-        List<Type> PluginTypes, 
-        List<IAssemblyPlugin> LoadedPlugins,
-        MemoryFileAssemblyContextLoader Acl);
 
     public enum AssemblyLoadingSuccessState
     {
@@ -780,6 +523,7 @@ public static class AssemblyManager
         InvalidAssembly,
         NoAssemblyFound,
         PluginInstanceFailure,
+        BadName,
         CannotLoadFromStream,
         Success
     }

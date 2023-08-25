@@ -84,9 +84,12 @@ public class CsPackageManager : IDisposable
             return;
         }
 
+        // register cleanup handle
         OnDispose += UnloadAll;
 
         // get packages
+        
+        
         // build load order
         // get assemblies from packages
     } 
@@ -101,7 +104,12 @@ public class CsPackageManager : IDisposable
     #region INTERNALS
 
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
-    
+
+    private IEnumerable<ContentPackage> BuildPackagesList()
+    {
+        throw new NotImplementedException();
+    }
+
     private void ProcessAndLoadPackagesList(IEnumerable<ContentPackage> packages)
     {
         throw new NotImplementedException();
@@ -110,7 +118,9 @@ public class CsPackageManager : IDisposable
     private void UnloadAll()
     {
         // tell plugin manager to unload all plugins
-        // tell assembly manager to unload all 
+        // tell assembly manager to unload all assemblies
+        // cleanup lists
+        
     }
     
 
@@ -122,7 +132,7 @@ public class CsPackageManager : IDisposable
     /// <returns>True if all dependencies were found.</returns>
     private static bool BuildDependenciesMap(in List<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
     {
-        bool reliableMap = true;
+        bool reliableMap = true;    // all deps were found.
         dependenciesMap = new();
         foreach (var package in packages)
         {

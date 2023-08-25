@@ -30,7 +30,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     // internal
     private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
     protected bool IsResolving;   //this is to avoid circular dependency lookup.
-    
+
     public MemoryFileAssemblyContextLoader() : base(isCollectible: true)
     {
         
@@ -66,6 +66,27 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             {
                 LoadFromAssemblyPath(filepath.CleanUpPath());
             }
+            // on fail of any we're done because we assume that loaded files are related. This ACL needs to be unloaded and collected.
+            catch (ArgumentNullException ane)
+            {
+                return AssemblyManager.AssemblyLoadingSuccessState.BadFilePath;
+            }
+            catch (ArgumentException ae)
+            {
+                return AssemblyManager.AssemblyLoadingSuccessState.BadFilePath;
+            }
+            catch (FileLoadException fle)
+            {
+                return AssemblyManager.AssemblyLoadingSuccessState.CannotLoadFile;
+            }
+            catch (FileNotFoundException fne)
+            {
+                return AssemblyManager.AssemblyLoadingSuccessState.NoAssemblyFound;
+            }
+            catch (BadImageFormatException bfe)
+            {
+                return AssemblyManager.AssemblyLoadingSuccessState.InvalidAssembly;
+            }
             catch (Exception e)
             {
 #if SERVER
@@ -73,6 +94,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 #elif CLIENT
                 LuaCsLogger.ShowErrorOverlay($"Unable to load dependency assembly file at {filepath} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
 #endif
+                return AssemblyManager.AssemblyLoadingSuccessState.ACLLoadFailure;
             }
         }
 
