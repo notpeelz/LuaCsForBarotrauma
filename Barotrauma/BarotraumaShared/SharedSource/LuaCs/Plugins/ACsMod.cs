@@ -5,7 +5,8 @@ using System.IO;
 
 namespace Barotrauma
 {
-    public abstract class ACsMod : IDisposable, IAssemblyPlugin
+    [Obsolete("Make your class implement IAssemblyPlugin instead.")]
+    public abstract class ACsMod : IAssemblyPlugin
     {
         private static List<ACsMod> mods = new List<ACsMod>();
         public static List<ACsMod> LoadedMods { get => mods; }
@@ -18,7 +19,6 @@ namespace Barotrauma
             if (!Directory.Exists(modFolder)) Directory.CreateDirectory(modFolder);
             return modFolder;
         }
-        public static string GetSoreFolder<T>() where T : ACsMod => GetStoreFolder<T>();
 
         public bool IsDisposed { get; private set; }
 
@@ -29,8 +29,14 @@ namespace Barotrauma
             LoadedMods.Add(this);
         }
 
+        /// <summary>
+        /// Called as soon as plugin loading begins, use this for internal setup only.
+        /// </summary>
         public virtual void Initialize() { }
 
+        /// <summary>
+        /// Called once all plugins have completed Initialization. Put cross-mod code here.
+        /// </summary>
         public virtual void OnLoadCompleted() { }
 
         public virtual PluginInfo GetPluginInfo() =>
@@ -50,11 +56,7 @@ namespace Barotrauma
             LoadedMods.Remove(this);
             IsDisposed = true;
         }
-
-        /// <summary>
-        /// [Obsolete] use Dispose instead. Called on plugin unloading. 
-        /// </summary>
-        [Obsolete]
+        
         public abstract void Stop();
     }
 }

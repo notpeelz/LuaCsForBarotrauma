@@ -31,6 +31,11 @@ public class CsPackageManager : IDisposable
 #endif
         });
     
+    private static readonly CSharpCompilationOptions CompilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+        .WithMetadataImportOptions(MetadataImportOptions.All)
+        .WithOptimizationLevel(OptimizationLevel.Release)
+        .WithAllowUnsafe(true);
+    
     private static readonly SyntaxTree BaseAssemblyImports = CSharpSyntaxTree.ParseText(
         new StringBuilder()
             .AppendLine("using System.Reflection;")
@@ -84,20 +89,10 @@ public class CsPackageManager : IDisposable
             return;
         }
 
-        // register cleanup handle
-        OnDispose += UnloadAll;
-
         // get packages
-        
-        
         // build load order
         // get assemblies from packages
     } 
-    
-    #region HELPER_FUNCS
-    
-    
-    #endregion
 
     #endregion
 
@@ -110,19 +105,6 @@ public class CsPackageManager : IDisposable
         throw new NotImplementedException();
     }
 
-    private void ProcessAndLoadPackagesList(IEnumerable<ContentPackage> packages)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void UnloadAll()
-    {
-        // tell plugin manager to unload all plugins
-        // tell assembly manager to unload all assemblies
-        // cleanup lists
-        
-    }
-    
 
     /// <summary>
     /// Builds a list of ContentPackage dependencies for each of the packages in the list. Note: All dependencies must be included in the provided list of packages.

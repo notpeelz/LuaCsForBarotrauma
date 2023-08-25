@@ -8,13 +8,20 @@ using Path = System.IO.Path;
 
 namespace Barotrauma;
 
-public static class PluginHelper
+[Obsolete("Replaced by CsPackageManager")]
+public class PluginHelper
 {
-    public static readonly string PluginAsmFileSuffix = "*.plugin.dll";
-    private static readonly object _OpsLock = new object();
-    public static bool IsInit { get; private set; } = false;
+    public readonly string PluginAsmFileSuffix = "*.plugin.dll";
+    private readonly object _OpsLock = new object();
+    public bool IsInit { get; private set; } = false;
+    private readonly AssemblyManager _assemblyManager;
+
+    internal PluginHelper(AssemblyManager manager)
+    {
+        this._assemblyManager = manager;
+    }
     
-    public static List<string> FindAssembliesFilePaths(string rootPath)
+    public List<string> FindAssembliesFilePaths(string rootPath)
     {
         if (!Directory.Exists(rootPath))
         {
@@ -23,7 +30,7 @@ public static class PluginHelper
         return Directory.GetFiles(rootPath, PluginAsmFileSuffix, SearchOption.TopDirectoryOnly).ToList();
     }
 
-    public static List<string> GetAllAssemblyPathsInPackages(ApplicationMode mode, TargetPlatform platform)
+    public List<string> GetAllAssemblyPathsInPackages(ApplicationMode mode, TargetPlatform platform)
     {
         if (!IsInit)
             InitHooks();
@@ -102,7 +109,7 @@ public static class PluginHelper
     }
     
     [MethodImpl(MethodImplOptions.Synchronized | MethodImplOptions.NoInlining)]
-    internal static void UnloadAssemblies()
+    public void UnloadAssemblies()
     {
         if (!IsInit)
             InitHooks();
@@ -110,8 +117,8 @@ public static class PluginHelper
         lock (_OpsLock)
         {
             int count = 100;
-            AssemblyManager.TryBeginDispose();
-            while (!AssemblyManager.FinalizeDispose() && count > 0)
+            _assemblyManager.TryBeginDispose();
+            while (!_assemblyManager.FinalizeDispose() && count > 0)
             {
                 count--;
                 System.Threading.Thread.Sleep(10);
@@ -120,7 +127,7 @@ public static class PluginHelper
     }
     
     [MethodImpl(MethodImplOptions.Synchronized | MethodImplOptions.NoInlining)]
-    internal static void LoadAssemblies()
+    public void LoadAssemblies()
     {
 #if SERVER
         var appMode = ApplicationMode.Server;
@@ -155,7 +162,7 @@ public static class PluginHelper
             foreach (string dllPath in pluginDllPaths)
             {
                 AssemblyManager.AssemblyLoadingSuccessState alss
-                    = AssemblyManager.LoadAssembliesFromLocation(dllPath, out var loadedAcl);
+                    = _assemblyManager.LoadAssembliesFromLocation(dllPath, out var loadedAcl);
                 if (alss == AssemblyManager.AssemblyLoadingSuccessState.Success)
                 {
                     if (loadedAcl is not null)
@@ -163,7 +170,7 @@ public static class PluginHelper
                 }
             }
 
-            if (AssemblyManager.LoadPlugins(out var pluginInfos))
+            if (_assemblyManager.LoadPlugins(out var pluginInfos))
             {
                 foreach (var pluginInfo in pluginInfos)
                 {
@@ -177,13 +184,13 @@ public static class PluginHelper
         }
     }
 
-    private static void OnAssemblyLoadedHandle(Assembly assembly)
+    private void OnAssemblyLoadedHandle(Assembly assembly)
     {
        ModUtils.Logging.PrintMessage($"Modding TK: Registering Assembly {assembly.FullName}");
         Barotrauma.ReflectionUtils.AddNonAbstractAssemblyTypes(assembly);
     }
 
-    private static void InitHooks()
+    private void InitHooks()
     {
         if (IsInit)
             return;
@@ -193,12 +200,12 @@ public static class PluginHelper
         IsInit = true;
     }
 
-    private static void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
+    private void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
     {
         Barotrauma.ReflectionUtils.RemoveAssemblyFromCache(assembly);
     }
 
-    private static void ReleaseHooks()
+    private void ReleaseHooks()
     {
         if (!IsInit)
             return;
@@ -208,7 +215,7 @@ public static class PluginHelper
         IsInit = false;
     }
 
-    private static void AssemblyManagerOnException(string arg1, Exception arg2)
+    private void AssemblyManagerOnException(string arg1, Exception arg2)
     {
        ModUtils.Logging.PrintError($"{arg1} | Exception Details: {arg2.Message}");
     }

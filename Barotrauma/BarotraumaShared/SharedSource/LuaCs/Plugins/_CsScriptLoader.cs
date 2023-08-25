@@ -14,6 +14,7 @@ using System.Xml.Linq;
 
 namespace Barotrauma
 {
+    [Obsolete("Replaced by MemoryFileAssemblyContextLoader")]
     class CsScriptLoader : CsScriptBase
     {
         private List<MetadataReference> defaultReferences;

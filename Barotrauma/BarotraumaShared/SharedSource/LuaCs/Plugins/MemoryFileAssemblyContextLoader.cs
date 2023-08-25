@@ -31,9 +31,11 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
     protected bool IsResolving;   //this is to avoid circular dependency lookup.
 
-    public MemoryFileAssemblyContextLoader() : base(isCollectible: true)
+    private AssemblyManager _assemblyManager;
+    
+    public MemoryFileAssemblyContextLoader(AssemblyManager assemblyManager) : base(isCollectible: true)
     {
-        
+        this._assemblyManager = assemblyManager;
     }
     
 
@@ -151,7 +153,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             .ToList());
             
         // build metadata refs from in-memory images
-        foreach (var loadedAcl in AssemblyManager.GetAllLoadedACLs())
+        foreach (var loadedAcl in _assemblyManager.GetAllLoadedACLs())
         {
             if (loadedAcl.Acl.CompiledAssemblyImage is null || loadedAcl.Acl.CompiledAssemblyImage.Length == 0)
                 continue;
@@ -226,7 +228,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             }
 
             //try resolve against other loaded alcs
-            foreach (var loadedAcL in AssemblyManager.GetAllLoadedACLs())
+            foreach (var loadedAcL in _assemblyManager.GetAllLoadedACLs())
             {
                 if (loadedAcL.Acl is null) continue;
                 

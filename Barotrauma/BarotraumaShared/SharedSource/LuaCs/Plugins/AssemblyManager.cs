@@ -24,30 +24,30 @@ namespace Barotrauma;
 /// All plugins are loaded into their own AssemblyLoadContext along with their dependencies.
 /// WARNING: [BLOCKING] functions perform Write Locks and will cause performance issues when used in parallel.
 /// </summary>
-public static class AssemblyManager
+public class AssemblyManager
 {
     #region ExternalAPI
     
     /// <summary>
     /// Called when an assembly is loaded.
     /// </summary>
-    public static event Action<Assembly> OnAssemblyLoaded;
+    public event Action<Assembly> OnAssemblyLoaded;
     
     /// <summary>
     /// Called when an assembly is marked for unloading, before unloading begins. You should use this to cleanup
     /// any references that you have to this assembly.
     /// </summary>
-    public static event Action<Assembly> OnAssemblyUnloading; 
+    public event Action<Assembly> OnAssemblyUnloading; 
     
     /// <summary>
     /// Called whenever an exception is thrown. First arg is a formatted message, Second arg is the Exception.
     /// </summary>
-    public static event Action<string, Exception> OnException;
+    public event Action<string, Exception> OnException;
 
     /// <summary>
     /// For unloading issue debugging. Called whenever MemoryFileAssemblyContextLoader [load context] is unloaded. 
     /// </summary>
-    public static event Action<Guid> OnACLUnload; 
+    public event Action<Guid> OnACLUnload; 
     
     #if DEBUG
 
@@ -55,7 +55,7 @@ public static class AssemblyManager
     /// [DEBUG ONLY]
     /// Returns a list of the current unloading ACLs. 
     /// </summary>
-    public static ImmutableList<WeakReference<MemoryFileAssemblyContextLoader>> StillUnloadingACLs
+    public ImmutableList<WeakReference<MemoryFileAssemblyContextLoader>> StillUnloadingACLs
     {
         get
         {
@@ -78,7 +78,7 @@ public static class AssemblyManager
     /// <summary>
     /// Checks if there are any AssemblyLoadContexts still in the process of unloading.
     /// </summary>
-    public static bool IsCurrentlyUnloading
+    public bool IsCurrentlyUnloading
     {
         get
         {
@@ -104,7 +104,7 @@ public static class AssemblyManager
     /// </summary>
     /// <typeparam name="T">The type to compare against</typeparam>
     /// <returns>An Enumerator for matching types.</returns>
-    public static IEnumerable<Type> GetSubTypesInLoadedAssemblies<T>()
+    public IEnumerable<Type> GetSubTypesInLoadedAssemblies<T>()
     {
         Type targetType = typeof(T);
 
@@ -129,7 +129,7 @@ public static class AssemblyManager
     /// </summary>
     /// <param name="name">The string name of the type to search for</param>
     /// <returns>An Enumerator for matching types.</returns>
-    public static IEnumerable<Type> GetMatchingTypesInLoadedAssemblies(string name)
+    public IEnumerable<Type> GetMatchingTypesInLoadedAssemblies(string name)
     {
         OpsLockLoaded.EnterReadLock();
         try
@@ -151,7 +151,7 @@ public static class AssemblyManager
     /// Allows iteration over all types (including interfaces) in all loaded assemblies managed by the AsmMgr.
     /// </summary>
     /// <returns>An Enumerator for iteration.</returns>
-    public static IEnumerable<Type> GetAllTypesInLoadedAssemblies()
+    public IEnumerable<Type> GetAllTypesInLoadedAssemblies()
     {
         OpsLockLoaded.EnterReadLock();
         try
@@ -166,43 +166,8 @@ public static class AssemblyManager
             OpsLockLoaded.ExitReadLock();
         }
     }
-    
-    
-    /// <summary>
-    /// Gets all types in the given assembly. Handles invalid type scenarios.
-    /// </summary>
-    /// <param name="assembly">The assembly to scan</param>
-    /// <returns>An enumerable collection of types.</returns>
-    public static IEnumerable<Type> GetSafeTypes(this Assembly assembly)
-    {
-        // Based on https://github.com/Qkrisi/ktanemodkit/blob/master/Assets/Scripts/ReflectionHelper.cs#L53-L67
 
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException re)
-        {
-            OnException?.Invoke($"AssemblyPatcher::GetSafeType() | Could not load types from reflection.", re);
-            try
-            {
-                return re.Types.Where(x => x != null)!;
-            }
-            catch (InvalidOperationException ioe)   
-            {
-                //This will happen if the assemblies are being unloaded while the above line is being executed.
-                OnException?.Invoke($"AssemblyPatcher::GetSafeType() | Assembly was modified/unloaded. Cannot continue", ioe);
-                return new List<Type>();
-            }
-        }
-        catch (Exception e)
-        {
-            OnException?.Invoke($"AssemblyPatcher::GetSafeType() | General Exception. See exception obj. details.", e);
-            return new List<Type>();
-        }
-    }
-
-    public static IEnumerable<LoadedACL> GetAllLoadedACLs()
+    public IEnumerable<LoadedACL> GetAllLoadedACLs()
     {
         try
         {
@@ -223,9 +188,9 @@ public static class AssemblyManager
     /// <summary>
     /// Used by content package and plugin management to stop unloading of a given ACL until all plugins have gracefully closed.
     /// </summary>
-    internal static event System.Func<LoadedACL, bool> IsReadyToUnloadACL;
+    public event System.Func<LoadedACL, bool> IsReadyToUnloadACL;
 
-    internal static AssemblyLoadingSuccessState LoadAssemblyFromMemory([NotNull] string compiledAssemblyName,
+    public AssemblyLoadingSuccessState LoadAssemblyFromMemory([NotNull] string compiledAssemblyName,
         [NotNull] IEnumerable<SyntaxTree> syntaxTree,
         IEnumerable<MetadataReference> externalMetadataReferences,
         [NotNull] CSharpCompilationOptions compilationOptions,
@@ -256,7 +221,7 @@ public static class AssemblyManager
     }
 
     
-    internal static AssemblyLoadingSuccessState LoadAssembliesFromLocations([NotNull] IEnumerable<string> filePaths,
+    public AssemblyLoadingSuccessState LoadAssembliesFromLocations([NotNull] IEnumerable<string> filePaths,
         ref Guid id)
     {
         // checks
@@ -289,7 +254,7 @@ public static class AssemblyManager
 
 
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.Synchronized)]
-    internal static bool TryBeginDispose()
+    public bool TryBeginDispose()
     {
         try
         {
@@ -337,7 +302,7 @@ public static class AssemblyManager
 
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static bool FinalizeDispose()
+    public bool FinalizeDispose()
     {
         bool isUnloaded;
         OpsLockUnloaded.EnterUpgradeableReadLock();
@@ -388,7 +353,7 @@ public static class AssemblyManager
     /// <param name="acl"></param>
     /// <returns>Should only return false if an error occurs.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static bool GetOrCreateACL(Guid id, out LoadedACL acl)
+    public bool GetOrCreateACL(Guid id, out LoadedACL acl)
     {
         OpsLockLoaded.EnterUpgradeableReadLock();
         try
@@ -399,7 +364,7 @@ public static class AssemblyManager
                 try
                 {
                     id = Guid.NewGuid();
-                    acl = new LoadedACL(id);
+                    acl = new LoadedACL(id, this);
                     LoadedACLs[id] = acl;
                     return true;
                 }
@@ -428,7 +393,7 @@ public static class AssemblyManager
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static bool DisposeACL(Guid id)
+    public bool DisposeACL(Guid id)
     {
         OpsLockLoaded.EnterWriteLock();
         OpsLockUnloaded.EnterWriteLock();
@@ -468,10 +433,10 @@ public static class AssemblyManager
 
     #region Data
 
-    private static readonly ConcurrentDictionary<Guid, LoadedACL> LoadedACLs = new();
-    private static readonly List<WeakReference<MemoryFileAssemblyContextLoader>> UnloadingACLs= new();
-    private static readonly ReaderWriterLockSlim OpsLockLoaded = new ReaderWriterLockSlim();
-    private static readonly ReaderWriterLockSlim OpsLockUnloaded = new ReaderWriterLockSlim();
+    public readonly ConcurrentDictionary<Guid, LoadedACL> LoadedACLs = new();
+    public readonly List<WeakReference<MemoryFileAssemblyContextLoader>> UnloadingACLs= new();
+    public readonly ReaderWriterLockSlim OpsLockLoaded = new ReaderWriterLockSlim();
+    public readonly ReaderWriterLockSlim OpsLockUnloaded = new ReaderWriterLockSlim();
 
     #endregion
 
@@ -483,12 +448,14 @@ public static class AssemblyManager
         public readonly Guid Id;
         private readonly List<Type> AssembliesTypes;
         public readonly MemoryFileAssemblyContextLoader Acl;
+        private readonly AssemblyManager _manager;
 
-        internal LoadedACL(Guid id)
+        internal LoadedACL(Guid id, AssemblyManager manager)
         {
             this.Id = id;
-            this.Acl = new();
+            this.Acl = new(manager);
             this.AssembliesTypes = new();
+            this._manager = manager;
         }
         public IEnumerable<Type> GetAssembliesTypes() => AssembliesTypes;
         
@@ -498,7 +465,7 @@ public static class AssemblyManager
         internal void SafeRebuildTypesList()
         {
             // Do not allow any unloading to occur while rebuilding this list.
-            OpsLockLoaded.EnterReadLock();
+            _manager.OpsLockLoaded.EnterReadLock();
             try
             {
                 AssembliesTypes.Clear();
@@ -509,7 +476,7 @@ public static class AssemblyManager
             }
             finally
             {
-                OpsLockLoaded.ExitReadLock();
+                _manager.OpsLockLoaded.ExitReadLock();
             }
         }
     }
@@ -529,4 +496,37 @@ public static class AssemblyManager
     }
 
     #endregion
+}
+
+public static class AssemblyExtensions
+{
+    /// <summary>
+    /// Gets all types in the given assembly. Handles invalid type scenarios.
+    /// </summary>
+    /// <param name="assembly">The assembly to scan</param>
+    /// <returns>An enumerable collection of types.</returns>
+    public static IEnumerable<Type> GetSafeTypes(this Assembly assembly)
+    {
+        // Based on https://github.com/Qkrisi/ktanemodkit/blob/master/Assets/Scripts/ReflectionHelper.cs#L53-L67
+
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException re)
+        {
+            try
+            {
+                return re.Types.Where(x => x != null)!;
+            }
+            catch (InvalidOperationException ioe)   
+            {
+                return new List<Type>();
+            }
+        }
+        catch (Exception e)
+        {
+            return new List<Type>();
+        }
+    }
 }
