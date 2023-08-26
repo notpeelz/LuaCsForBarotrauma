@@ -7,9 +7,11 @@ using System.Xml.Serialization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Barotrauma.Extensions;
 using Barotrauma.Steam;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using MonoMod.Utils;
 
 namespace Barotrauma;
 
@@ -66,7 +68,7 @@ public class CsPackageManager : IDisposable
         ScriptParseOptions);
 
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
-    private readonly Dictionary<ContentPackage, List<ContentPackage>> _packagesDependencies = new();
+    private readonly Dictionary<ContentPackage, ImmutableList<ContentPackage>> _packagesDependencies = new();
     private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
     private readonly Dictionary<Guid, List<IAssemblyPlugin>> _loadedPlugins = new ();
     private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
@@ -109,66 +111,109 @@ public class CsPackageManager : IDisposable
         throw new NotImplementedException();
     }
 
-    public void BeginPackageLoading()
+    public AssemblyLoadingSuccessState BeginPackageLoading()
     {
         if (IsLoaded)
         {
             LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(BeginPackageLoading)}() | Attempted to load packages when already loaded!");
-            return;
+            return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
 
         // get packages
         IEnumerable<ContentPackage> packages = BuildPackagesList();
-        
-        _packagesDependencies.Clear();
-        _loadedCompiledPackageAssemblies.Clear();
-        _packageRunConfigs.Clear();
-        
+
         // check and load config
-        
-        
+        _packageRunConfigs.AddRange(packages
+            .Select(p => new KeyValuePair<ContentPackage, RunConfig>(p, GetRunConfigForPackage(p)))
+            .ToDictionary(p => p.Key, p=> p.Value));
+
         // filter not to be loaded
-        
-        
+        var cpToRun = _packageRunConfigs
+            .Where(kvp => ShouldRunPackage(kvp.Key, kvp.Value))
+            .Select(kvp => kvp.Key)
+            .ToImmutableList();
+
+        // build dependencies map
+        if (!TryBuildDependenciesMap(cpToRun, out var packDeps))
+        {
+            ModUtils.Logging.PrintMessage($"{nameof(CsPackageManager)}: Unable to create reliable dependencies map.");
+        }
+        _packagesDependencies.AddRange(packDeps);
+        _currentPackagesByLoadOrder.Clear();
+
         // build load order
-        
+        if (OrderAndFilterPackagesByDependencies(
+                _packagesDependencies,
+                out var readyToLoad,
+                out var cannotLoadPackages,
+                null))
+        {
+            _currentPackagesByLoadOrder.AddRange(readyToLoad);
+            if (cannotLoadPackages is not null)
+            {
+                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the following mods due to dependency errors:");
+                foreach (var pair in cannotLoadPackages)
+                {
+                    ModUtils.Logging.PrintError($"Package: {pair.Key.Name} | Reason: {pair.Value}");
+                }
+            }
+        }
+        else
+        {
+            // use unsorted list on failure and send error message.
+            _currentPackagesByLoadOrder.AddRange(_packagesDependencies.Select( p=> p.Key));
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to create a reliable load order. Defaulting to unordered loading!");
+        }
         
         // get assemblies' filepaths from packages
-        
-        
+        var assembliesToLoad = _currentPackagesByLoadOrder
+            .Select(cp => new KeyValuePair<ContentPackage, ImmutableList<string>>(
+                cp,
+                TryScanPackagesForAssemblies(cp, out var list) ? list : null));
+
         // get scripts' filepaths from packages
-        
-        
+        var scriptsToLoad = _currentPackagesByLoadOrder
+            .Select(cp => new KeyValuePair<ContentPackage, ImmutableList<string>>(
+                cp,
+                TryScanPackageForScripts(cp, out var list) ? list : null));
+
         // load assemblies
-        
-        
+
+
         // compile scripts to assemblies
-        
-        
+
+
         // search for plugins
-        
-        
+
+
         // begin plugin execution
+
+
+        bool ShouldRunPackage(ContentPackage package, RunConfig config)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     #endregion
 
     #region INTERNALS
 
-    private static bool TryScanPackageForScripts(ContentPackage package, out IEnumerable<string> scriptFilePaths)
+    private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
     {
-        
+        throw new NotImplementedException();
     }
 
-    private static bool TryScanPackagesForAssemblies(ContentPackage package, out IEnumerable<string> assemblyFilePaths)
+    private static bool TryScanPackagesForAssemblies(ContentPackage package, out ImmutableList<string> assemblyFilePaths)
     {
-        
+        throw new NotImplementedException();
     }
 
-    private static bool TryGetRunConfigForPackage(ContentPackage package, out RunConfig config)
+    private static RunConfig GetRunConfigForPackage(ContentPackage package)
     {
-        
+        throw new NotImplementedException();
     }
+    
     
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
@@ -184,7 +229,7 @@ public class CsPackageManager : IDisposable
     /// <param name="packages">List of packages to check</param>
     /// <param name="dependenciesMap">Dependencies by package</param>
     /// <returns>True if all dependencies were found.</returns>
-    private static bool BuildDependenciesMap(in List<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
+    private static bool TryBuildDependenciesMap(ImmutableList<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
     {
         bool reliableMap = true;    // all deps were found.
         dependenciesMap = new();
@@ -228,12 +273,12 @@ public class CsPackageManager : IDisposable
     /// </summary>
     /// <param name="packages">A dictionary/map with key as the package and the elements as it's dependencies.</param>
     /// <param name="readyToLoad">List of packages that are ready to load and in the correct order.</param>
-    /// <param name="cannotLoadPackages">Packages with errors or cyclic dependencies.</param>
+    /// <param name="cannotLoadPackages">Packages with errors or cyclic dependencies. Element is error message. Null if empty.</param>
     /// <param name="packageChecksPredicate">Optional: Allows for a custom checks to be performed on each package.
     /// Returns a bool indicating if the package is ready to load.</param>
     /// <returns>Whether or not the process produces a usable list.</returns>
     private static bool OrderAndFilterPackagesByDependencies(
-        Dictionary<ContentPackage, IEnumerable<ContentPackage>> packages,
+        Dictionary<ContentPackage, ImmutableList<ContentPackage>> packages,
         out IEnumerable<ContentPackage> readyToLoad,
         out IEnumerable<KeyValuePair<ContentPackage, string>> cannotLoadPackages,
         Func<ContentPackage, bool> packageChecksPredicate = null)
@@ -244,7 +289,6 @@ public class CsPackageManager : IDisposable
         HashSet<ContentPackage> currentNodeChain = new();
 
         readyToLoad = readyPackages;
-        cannotLoadPackages = unableToLoad;
 
         try
         {
@@ -343,9 +387,10 @@ public class CsPackageManager : IDisposable
 #if DEBUG
             ModUtils.Logging.PrintError($"Stack Trace: {e.StackTrace}");
 #endif
+            cannotLoadPackages = unableToLoad.Any() ? unableToLoad : null;
             return false;
         }
-
+        cannotLoadPackages = unableToLoad.Any() ? unableToLoad : null;
         return true;
     }
 

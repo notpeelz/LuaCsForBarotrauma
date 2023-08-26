@@ -24,7 +24,7 @@ namespace Barotrauma;
 /// All plugins are loaded into their own AssemblyLoadContext along with their dependencies.
 /// WARNING: [BLOCKING] functions perform Write Locks and will cause performance issues when used in parallel.
 /// </summary>
-public class AssemblyManager
+public partial class AssemblyManager
 {
     #region ExternalAPI
     
@@ -479,20 +479,6 @@ public class AssemblyManager
                 _manager.OpsLockLoaded.ExitReadLock();
             }
         }
-    }
-
-    public enum AssemblyLoadingSuccessState
-    {
-        ACLLoadFailure,
-        AlreadyLoaded,
-        BadFilePath,
-        CannotLoadFile,
-        InvalidAssembly,
-        NoAssemblyFound,
-        PluginInstanceFailure,
-        BadName,
-        CannotLoadFromStream,
-        Success
     }
 
     #endregion

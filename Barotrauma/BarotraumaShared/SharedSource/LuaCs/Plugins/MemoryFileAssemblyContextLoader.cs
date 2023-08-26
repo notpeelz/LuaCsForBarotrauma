@@ -43,7 +43,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     /// 
     /// </summary>
     /// <param name="assemblyFilePaths"></param>
-    public AssemblyManager.AssemblyLoadingSuccessState LoadFromFiles([NotNull] IEnumerable<string> assemblyFilePaths)
+    public AssemblyLoadingSuccessState LoadFromFiles([NotNull] IEnumerable<string> assemblyFilePaths)
     {
         if (assemblyFilePaths is null)
             throw new ArgumentNullException(
@@ -71,23 +71,23 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             // on fail of any we're done because we assume that loaded files are related. This ACL needs to be unloaded and collected.
             catch (ArgumentNullException ane)
             {
-                return AssemblyManager.AssemblyLoadingSuccessState.BadFilePath;
+                return AssemblyLoadingSuccessState.BadFilePath;
             }
             catch (ArgumentException ae)
             {
-                return AssemblyManager.AssemblyLoadingSuccessState.BadFilePath;
+                return AssemblyLoadingSuccessState.BadFilePath;
             }
             catch (FileLoadException fle)
             {
-                return AssemblyManager.AssemblyLoadingSuccessState.CannotLoadFile;
+                return AssemblyLoadingSuccessState.CannotLoadFile;
             }
             catch (FileNotFoundException fne)
             {
-                return AssemblyManager.AssemblyLoadingSuccessState.NoAssemblyFound;
+                return AssemblyLoadingSuccessState.NoAssemblyFound;
             }
             catch (BadImageFormatException bfe)
             {
-                return AssemblyManager.AssemblyLoadingSuccessState.InvalidAssembly;
+                return AssemblyLoadingSuccessState.InvalidAssembly;
             }
             catch (Exception e)
             {
@@ -96,11 +96,11 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 #elif CLIENT
                 LuaCsLogger.ShowErrorOverlay($"Unable to load dependency assembly file at {filepath} for the assembly named {CompiledAssembly?.FullName}. | Data: {e.Message} | InnerException: {e.InnerException}");
 #endif
-                return AssemblyManager.AssemblyLoadingSuccessState.ACLLoadFailure;
+                return AssemblyLoadingSuccessState.ACLLoadFailure;
             }
         }
 
-        return AssemblyManager.AssemblyLoadingSuccessState.Success;
+        return AssemblyLoadingSuccessState.Success;
     }
 
 
@@ -118,7 +118,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     /// <param name="compilationMessages">Will contain any diagnostic messages for compilation failure.</param>
     /// <returns>Success state of the operation.</returns>
     /// <exception cref="ArgumentNullException">Throws exception if any of the required arguments are null.</exception>
-    public AssemblyManager.AssemblyLoadingSuccessState CompileAndLoadScriptAssembly(
+    public AssemblyLoadingSuccessState CompileAndLoadScriptAssembly(
         [NotNull] string assemblyName,
         [NotNull] IEnumerable<SyntaxTree> syntaxTrees,
         IEnumerable<MetadataReference> externMetadataReferences,
@@ -129,7 +129,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 
         if (this.CompiledAssembly is not null)
         {
-            return AssemblyManager.AssemblyLoadingSuccessState.AlreadyLoaded;
+            return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
 
         // verifications
@@ -177,7 +177,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
                 compilationMessages += $"\n{diagnostic}";
             }
 
-            return AssemblyManager.AssemblyLoadingSuccessState.InvalidAssembly;
+            return AssemblyLoadingSuccessState.InvalidAssembly;
         }
 
         // read compiled assembly from memory stream into an in-memory assembly & image
@@ -194,10 +194,10 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 #elif CLIENT
             LuaCsLogger.ShowErrorOverlay($"Unable to load memory assembly from stream. | Data: {e.Message} | InnerException: {e.InnerException}");
 #endif
-            return AssemblyManager.AssemblyLoadingSuccessState.CannotLoadFromStream;
+            return AssemblyLoadingSuccessState.CannotLoadFromStream;
         }
 
-        return AssemblyManager.AssemblyLoadingSuccessState.Success;
+        return AssemblyLoadingSuccessState.Success;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

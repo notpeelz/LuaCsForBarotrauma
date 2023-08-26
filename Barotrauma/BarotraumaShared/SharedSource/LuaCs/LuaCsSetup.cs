@@ -10,7 +10,6 @@ using System.Diagnostics;
 using MoonSharp.VsCodeDebugger;
 using System.Reflection;
 
-[assembly: InternalsVisibleTo(Barotrauma.CsScriptBase.CsScriptAssembly, AllInternalsVisible = true)]
 namespace Barotrauma
 {
     class LuaCsSetupConfig

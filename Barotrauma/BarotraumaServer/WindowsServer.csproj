@@ -103,6 +103,9 @@
     <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\TargetPlatform.cs">
       <Link>SharedSource\LuaCs\Plugins\TargetPlatform.cs</Link>
     </Compile>
+    <Compile Update="..\BarotraumaShared\SharedSource\LuaCs\Plugins\AssemblyLoadingSuccessState.cs">
+      <Link>SharedSource\LuaCs\Plugins\AssemblyLoadingSuccessState.cs</Link>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)'!='Debug'">

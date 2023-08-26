@@ -161,9 +161,9 @@ public class PluginHelper
             List<AssemblyManager.LoadedACL> loadedAcls = new();
             foreach (string dllPath in pluginDllPaths)
             {
-                AssemblyManager.AssemblyLoadingSuccessState alss
+                AssemblyLoadingSuccessState alss
                     = _assemblyManager.LoadAssembliesFromLocation(dllPath, out var loadedAcl);
-                if (alss == AssemblyManager.AssemblyLoadingSuccessState.Success)
+                if (alss == AssemblyLoadingSuccessState.Success)
                 {
                     if (loadedAcl is not null)
                         loadedAcls.Add(loadedAcl);
