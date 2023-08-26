@@ -65,10 +65,12 @@ namespace Barotrauma
         public LuaCsSteam Steam { get; private set; }
         public LuaCsPerformanceCounter PerformanceCounter { get; private set; }
 
+        public AssemblyManager AssemblyManager { get; private set; }
+        
+        public CsPackageManager PackageManager { get; private set; }
+
         public LuaCsModStore ModStore { get; private set; }
         private LuaRequire require { get; set; }
-
-        public CsScriptLoader CsScriptLoader { get; private set; }
         public LuaCsSetupConfig Config { get; private set; }
         public MoonSharpVsCodeDebugServer DebugServer { get; private set; }
 
@@ -89,7 +91,6 @@ namespace Barotrauma
 
             Game = new LuaGame();
             Networking = new LuaCsNetworking();
-
             DebugServer = new MoonSharpVsCodeDebugServer();
 
             if (File.Exists(configFileName))
