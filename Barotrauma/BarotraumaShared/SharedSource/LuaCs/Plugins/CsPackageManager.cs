@@ -227,7 +227,7 @@ public sealed class CsPackageManager : IDisposable
             if (successState is not AssemblyLoadingSuccessState.Success)
             {
                 ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the binary assemblies for package {pair.Key.Name}. Error: {successState.ToString()}");
-                UpdatePackagesToDisable(ref badPackages, pair.Key);
+                UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                 continue;
             }
             
@@ -244,7 +244,7 @@ public sealed class CsPackageManager : IDisposable
                 if (state is not ModUtils.IO.IOActionResultState.Success)
                 {
                     ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {state.ToString()}");
-                    UpdatePackagesToDisable(ref badPackages, pair.Key);
+                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                     abortPackage = true;
                     break;
                 }
@@ -257,7 +257,7 @@ public sealed class CsPackageManager : IDisposable
                     if (token.IsCancellationRequested)
                     {
                         ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: Syntax Parse Error.");
-                        UpdatePackagesToDisable(ref badPackages, pair.Key);
+                        UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                         abortPackage = true;
                         break;
                     }
@@ -266,7 +266,7 @@ public sealed class CsPackageManager : IDisposable
                 {
                     // unknown error
                     ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {e.Message}");
-                    UpdatePackagesToDisable(ref badPackages, pair.Key);
+                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                     abortPackage = true;
                     break;
                 }
@@ -286,7 +286,7 @@ public sealed class CsPackageManager : IDisposable
             if (successState is not AssemblyLoadingSuccessState.Success)
             {
                 ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to compile script assembly for package {pair.Key.Name}. Error: {successState.ToString()}");
-                UpdatePackagesToDisable(ref badPackages, pair.Key);
+                UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                 continue;
             }
             
@@ -313,21 +313,36 @@ public sealed class CsPackageManager : IDisposable
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
         {
-            throw new NotImplementedException();
+#if CLIENT
+            return config.Client.Trim().ToLowerInvariant().Contains("forced")
+                   || (config.Client.Trim().ToLowerInvariant().Contains("standard") &&
+                       ContentPackageManager.EnabledPackages.All.Contains(package));
+#elif SERVER
+            return config.Server.Trim().ToLowerInvariant().Contains("forced")
+                   || (config.Server.Trim().ToLowerInvariant().Contains("standard") &&
+                       ContentPackageManager.EnabledPackages.All.Contains(package));
+#endif
         }
 
-        void UpdatePackagesToDisable(ref HashSet<ContentPackage> list, in ContentPackage newDisabledPackage)
+        void UpdatePackagesToDisable(ref HashSet<ContentPackage> list, 
+            ContentPackage newDisabledPackage, 
+            IEnumerable<KeyValuePair<ContentPackage, ImmutableList<ContentPackage>>> dependenciesMap)
         {
-            throw new NotImplementedException();
+            list.Add(newDisabledPackage);
+            foreach (var package in dependenciesMap)
+            {
+                if (package.Value.Contains(newDisabledPackage))
+                    list.Add(newDisabledPackage);
+            }
         }
 
-        throw new NotImplementedException();    // todo: remove once complete
+        return AssemblyLoadingSuccessState.Success;
     }
 
     #endregion
 
     #region INTERNALS
-
+    
     private void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
     {
         ReflectionUtils.RemoveAssemblyFromCache(assembly);
@@ -336,6 +351,31 @@ public sealed class CsPackageManager : IDisposable
     private void AssemblyManagerOnAssemblyLoaded(Assembly assembly)
     {
         ReflectionUtils.AddNonAbstractAssemblyTypes(assembly);
+    }
+    
+    internal CsPackageManager([NotNull] AssemblyManager assemblyManager)
+    {
+        this._assemblyManager = assemblyManager;
+    }
+
+    private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static bool TryScanPackagesForAssemblies(ContentPackage package, out ImmutableList<string> assemblyFilePaths)
+    {
+        throw new NotImplementedException();
+    }
+
+    private static RunConfig GetRunConfigForPackage(ContentPackage package)
+    {
+        throw new NotImplementedException();
+    }
+    
+    private IEnumerable<ContentPackage> BuildPackagesList()
+    {
+        throw new NotImplementedException();
     }
     
     private void LoadPlugins(bool force = false)
@@ -398,33 +438,11 @@ public sealed class CsPackageManager : IDisposable
         _pluginsLoaded = false;
     }
     
-    internal CsPackageManager([NotNull] AssemblyManager assemblyManager)
-    {
-        this._assemblyManager = assemblyManager;
-    }
-
-    private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
-    {
-        throw new NotImplementedException();
-    }
-
-    private static bool TryScanPackagesForAssemblies(ContentPackage package, out ImmutableList<string> assemblyFilePaths)
-    {
-        throw new NotImplementedException();
-    }
-
-    private static RunConfig GetRunConfigForPackage(ContentPackage package)
-    {
-        throw new NotImplementedException();
-    }
     
     
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
-    private IEnumerable<ContentPackage> BuildPackagesList()
-    {
-        throw new NotImplementedException();
-    }
+    
 
 
     /// <summary>
