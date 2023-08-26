@@ -172,7 +172,8 @@ public sealed class CsPackageManager : IDisposable
             .ToImmutableList();
 
         // build dependencies map
-        if (!TryBuildDependenciesMap(cpToRun, out var packDeps))
+        bool reliableMap = TryBuildDependenciesMap(cpToRun, out var packDeps);
+        if (!reliableMap)
         {
             ModUtils.Logging.PrintMessage($"{nameof(CsPackageManager)}: Unable to create reliable dependencies map.");
         }
@@ -181,7 +182,7 @@ public sealed class CsPackageManager : IDisposable
         List<ContentPackage> packagesToLoadInOrder = new();
 
         // build load order
-        if (OrderAndFilterPackagesByDependencies(
+        if (reliableMap && OrderAndFilterPackagesByDependencies(
                 _packagesDependencies,
                 out var readyToLoad,
                 out var cannotLoadPackages,
@@ -222,75 +223,86 @@ public sealed class CsPackageManager : IDisposable
 
             // try load binary assemblies
             var id = Guid.Empty;    // id for the ACL for this package defined by AssemblyManager.
-            var successState = _assemblyManager.LoadAssembliesFromLocations(pair.Value.AssembliesFilePaths, ref id);
-            // error
-            if (successState is not AssemblyLoadingSuccessState.Success)
+            AssemblyLoadingSuccessState successState = AssemblyLoadingSuccessState.NoAssemblyFound;
+            if (pair.Value.AssembliesFilePaths.Any())
             {
-                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the binary assemblies for package {pair.Key.Name}. Error: {successState.ToString()}");
-                UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
-                continue;
+                successState = _assemblyManager.LoadAssembliesFromLocations(pair.Value.AssembliesFilePaths, ref id);
+                // error
+                if (successState is not AssemblyLoadingSuccessState.Success)
+                {
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the binary assemblies for package {pair.Key.Name}. Error: {successState.ToString()}");
+                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
+                    continue;
+                }
             }
             
             // try compile scripts to assemblies
-            List<SyntaxTree> syntaxTrees = new();
-            
-            syntaxTrees.Add(GetPackageScriptImports());
-            bool abortPackage = false;
-            // load scripts data from files
-            foreach (string scriptPath in pair.Value.ScriptsFilePaths)
+            if (pair.Value.ScriptsFilePaths.Any())
             {
-                var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText);
-                // could not load file data
-                if (state is not ModUtils.IO.IOActionResultState.Success)
+                List<SyntaxTree> syntaxTrees = new();
+            
+                syntaxTrees.Add(GetPackageScriptImports());
+                bool abortPackage = false;
+                // load scripts data from files
+                foreach (string scriptPath in pair.Value.ScriptsFilePaths)
                 {
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {state.ToString()}");
-                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
-                    abortPackage = true;
-                    break;
-                }
-
-                try
-                {
-                    CancellationToken token = new();
-                    syntaxTrees.Add(SyntaxFactory.ParseSyntaxTree(fileText, ScriptParseOptions, scriptPath, Encoding.Default, token));
-                    // cancel if parsing failed
-                    if (token.IsCancellationRequested)
+                    var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText);
+                    // could not load file data
+                    if (state is not ModUtils.IO.IOActionResultState.Success)
                     {
-                        ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: Syntax Parse Error.");
+                        ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {state.ToString()}");
                         UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
                         abortPackage = true;
                         break;
                     }
-                }
-                catch (Exception e)
-                {
-                    // unknown error
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {e.Message}");
-                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
-                    abortPackage = true;
-                    break;
-                }
-                
-            }
-            if (abortPackage)
-                continue;
-            
-            // try compile
-            successState = _assemblyManager.LoadAssemblyFromMemory(
-                pair.Key.Name.Replace(" ",""), 
-                syntaxTrees, 
-                null, 
-                CompilationOptions, 
-                ref id);
 
-            if (successState is not AssemblyLoadingSuccessState.Success)
-            {
-                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to compile script assembly for package {pair.Key.Name}. Error: {successState.ToString()}");
-                UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
-                continue;
-            }
+                    try
+                    {
+                        CancellationToken token = new();
+                        syntaxTrees.Add(SyntaxFactory.ParseSyntaxTree(fileText, ScriptParseOptions, scriptPath, Encoding.Default, token));
+                        // cancel if parsing failed
+                        if (token.IsCancellationRequested)
+                        {
+                            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: Syntax Parse Error.");
+                            UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
+                            abortPackage = true;
+                            break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // unknown error
+                        ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {e.Message}");
+                        UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
+                        abortPackage = true;
+                        break;
+                    }
+                
+                }
+                if (abortPackage)
+                    continue;
             
-            _loadedCompiledPackageAssemblies.Add(pair.Key, id);
+                // try compile
+                successState = _assemblyManager.LoadAssemblyFromMemory(
+                    pair.Key.Name.Replace(" ",""), 
+                    syntaxTrees, 
+                    null, 
+                    CompilationOptions, 
+                    ref id);
+
+                if (successState is not AssemblyLoadingSuccessState.Success)
+                {
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to compile script assembly for package {pair.Key.Name}. Error: {successState.ToString()}");
+                    UpdatePackagesToDisable(ref badPackages, pair.Key, _packagesDependencies);
+                    continue;
+                }
+            }
+
+            // something was loaded, add to index
+            if (id != Guid.Empty)
+            {
+                _loadedCompiledPackageAssemblies.Add(pair.Key, id);
+            }
         }
 
         // update loaded packages to exclude bad packages
@@ -313,6 +325,8 @@ public sealed class CsPackageManager : IDisposable
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
         {
+            if (config.AutoGenerated)
+                return false;
 #if CLIENT
             return config.Client.Trim().ToLowerInvariant().Contains("forced")
                    || (config.Client.Trim().ToLowerInvariant().Contains("standard") &&
@@ -360,6 +374,8 @@ public sealed class CsPackageManager : IDisposable
 
     private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
     {
+        var fpaths = new List<string>();
+
         throw new NotImplementedException();
     }
 
