@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -75,7 +76,7 @@ public sealed class CsPackageManager : IDisposable
     private readonly Dictionary<ContentPackage, ImmutableList<ContentPackage>> _packagesDependencies = new();
     private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
     private readonly Dictionary<Guid, List<IAssemblyPlugin>> _loadedPlugins = new ();
-    private readonly Dictionary<Guid, Type> _pluginTypes = new();
+    private readonly Dictionary<Guid, ImmutableList<Type>> _pluginTypes = new(); // where Type : IAssemblyPlugin
     private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
     private readonly AssemblyManager _assemblyManager;
     private bool _pluginsLoaded = false;
@@ -152,6 +153,9 @@ public sealed class CsPackageManager : IDisposable
             LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(BeginPackageLoading)}() | Attempted to load packages when already loaded!");
             return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
+        
+        _assemblyManager.OnAssemblyLoaded += AssemblyManagerOnAssemblyLoaded;
+        _assemblyManager.OnAssemblyUnloading += AssemblyManagerOnAssemblyUnloading;
 
         // get packages
         IEnumerable<ContentPackage> packages = BuildPackagesList();
@@ -294,22 +298,17 @@ public sealed class CsPackageManager : IDisposable
             .Where(p => !badPackages.Contains(p.Key))
             .Select(p => p.Key));
 
-        // search for plugins & instantiate them
+        // build list of plugins
         foreach (var pair in _loadedCompiledPackageAssemblies)
         {
             if (_assemblyManager.TryGetSubTypesFromACL<IAssemblyPlugin>(pair.Value, out var types))
             {
-                if (!_loadedPlugins.ContainsKey(pair.Value))
-                    _loadedPlugins.Add(pair.Value, new List<IAssemblyPlugin>());
-                else if (_loadedPlugins[pair.Value] is null)
-                    _loadedPlugins[pair.Value] = new List<IAssemblyPlugin>();
-
-                foreach (Type type in types)
-                {
-                    _loadedPlugins[pair.Value].Add((IAssemblyPlugin)Activator.CreateInstance(type));
-                }
+                _pluginTypes[pair.Value] = types.ToImmutableList();
             }
         }
+        
+        // instantiate and load
+        LoadPlugins(true);
 
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
@@ -322,13 +321,23 @@ public sealed class CsPackageManager : IDisposable
             throw new NotImplementedException();
         }
 
-        throw new NotImplementedException();
+        throw new NotImplementedException();    // todo: remove once complete
     }
 
     #endregion
 
     #region INTERNALS
 
+    private void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
+    {
+        ReflectionUtils.RemoveAssemblyFromCache(assembly);
+    }
+
+    private void AssemblyManagerOnAssemblyLoaded(Assembly assembly)
+    {
+        ReflectionUtils.AddNonAbstractAssemblyTypes(assembly);
+    }
+    
     private void LoadPlugins(bool force = false)
     {
         if (_pluginsLoaded)
@@ -342,12 +351,51 @@ public sealed class CsPackageManager : IDisposable
             }
         }
         
-        
+        foreach (var pair in _pluginTypes)
+        {
+            // instantiate
+            foreach (Type type in pair.Value)
+            {
+                if (!_loadedPlugins.ContainsKey(pair.Key))
+                    _loadedPlugins.Add(pair.Key, new());
+                else if (_loadedPlugins[pair.Key] is null)
+                    _loadedPlugins[pair.Key] = new();
+                _loadedPlugins[pair.Key].Add((IAssemblyPlugin)Activator.CreateInstance(type));
+            }
+
+            // bootstrap
+            foreach (var plugin in _loadedPlugins[pair.Key])
+            {
+                plugin.Initialize();
+            }
+        }
+
+        // post load
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            foreach (var plugin in contentPlugins.Value)
+            {
+                plugin.OnLoadCompleted();
+            }
+        }
+
+        _pluginsLoaded = true;
     }
 
     private void UnloadPlugins()
     {
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            foreach (var plugin in contentPlugins.Value)
+            {
+                plugin.Dispose();
+            }
+            contentPlugins.Value.Clear();
+        }
         
+        _loadedPlugins.Clear();
+
+        _pluginsLoaded = false;
     }
     
     internal CsPackageManager([NotNull] AssemblyManager assemblyManager)

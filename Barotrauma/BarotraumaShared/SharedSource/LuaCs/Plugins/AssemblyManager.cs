@@ -232,7 +232,10 @@ public partial class AssemblyManager
         
         // get types
         if (state is AssemblyLoadingSuccessState.Success)
+        {
             acl.SafeRebuildTypesList();
+            OnAssemblyLoaded?.Invoke(acl.Acl.CompiledAssembly);
+        }
 
         return state;
     }
@@ -263,6 +266,10 @@ public partial class AssemblyManager
             }
             // build types list
             loadedAcl.SafeRebuildTypesList();
+            foreach (Assembly assembly in loadedAcl.Acl.Assemblies)
+            {
+                OnAssemblyLoaded?.Invoke(assembly);
+            }
             return state;
         }
 
