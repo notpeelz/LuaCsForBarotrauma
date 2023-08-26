@@ -123,7 +123,24 @@ public partial class AssemblyManager
             OpsLockLoaded.ExitReadLock();
         }
     }
+
     
+    public bool TryGetSubTypesFromACL<T>(Guid id, out IEnumerable<Type> types)
+    {
+        Type targetType = typeof(T);
+
+        if (TryGetACL(id, out var acl))
+        {
+            types = acl.GetAssembliesTypes()
+                .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface);
+            return true;
+        }
+
+        types = null;
+        return false;
+    }
+
+
     /// <summary>
     /// Allows iteration over all non-interface types in all loaded assemblies in the AsmMgr who's names contain the string.
     /// </summary>
@@ -353,7 +370,7 @@ public partial class AssemblyManager
     /// <param name="acl"></param>
     /// <returns>Should only return false if an error occurs.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool GetOrCreateACL(Guid id, out LoadedACL acl)
+    private bool GetOrCreateACL(Guid id, out LoadedACL acl)
     {
         OpsLockLoaded.EnterUpgradeableReadLock();
         try
@@ -392,8 +409,32 @@ public partial class AssemblyManager
         }
     }
 
+    /// <summary>
+    /// Tries to retrieve the LoadedACL with the given ID or null if none is found.
+    /// </summary>
+    /// <param name="id">GUID of the ACL.</param>
+    /// <param name="acl">The found ACL or null if none was found.</param>
+    /// <returns>Whether or not an ACL was found.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public bool DisposeACL(Guid id)
+    private bool TryGetACL(Guid id, out LoadedACL acl)
+    {
+        acl = null;
+        OpsLockLoaded.EnterReadLock();
+        try
+        {
+            if (id.Equals(Guid.Empty) || !LoadedACLs.ContainsKey(id))
+                return false;
+            acl = LoadedACLs[id];
+            return true;
+        }
+        finally
+        {
+            OpsLockLoaded.ExitReadLock();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool DisposeACL(Guid id)
     {
         OpsLockLoaded.EnterWriteLock();
         OpsLockUnloaded.EnterWriteLock();
@@ -433,10 +474,10 @@ public partial class AssemblyManager
 
     #region Data
 
-    public readonly ConcurrentDictionary<Guid, LoadedACL> LoadedACLs = new();
-    public readonly List<WeakReference<MemoryFileAssemblyContextLoader>> UnloadingACLs= new();
-    public readonly ReaderWriterLockSlim OpsLockLoaded = new ReaderWriterLockSlim();
-    public readonly ReaderWriterLockSlim OpsLockUnloaded = new ReaderWriterLockSlim();
+    private readonly ConcurrentDictionary<Guid, LoadedACL> LoadedACLs = new();
+    private readonly List<WeakReference<MemoryFileAssemblyContextLoader>> UnloadingACLs= new();
+    private readonly ReaderWriterLockSlim OpsLockLoaded = new ReaderWriterLockSlim();
+    private readonly ReaderWriterLockSlim OpsLockUnloaded = new ReaderWriterLockSlim();
 
     #endregion
 

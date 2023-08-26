@@ -2,11 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Xml.Serialization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Barotrauma.Extensions;
 using Barotrauma.Steam;
 using Microsoft.CodeAnalysis;
@@ -15,7 +18,7 @@ using MonoMod.Utils;
 
 namespace Barotrauma;
 
-public class CsPackageManager : IDisposable
+public sealed class CsPackageManager : IDisposable
 {
     #region PRIVATE_FUNCDATA
 
@@ -67,11 +70,16 @@ public class CsPackageManager : IDisposable
             .ToString(),
         ScriptParseOptions);
 
+    private readonly float _assemblyUnloadTimeoutSeconds = 10f;
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
     private readonly Dictionary<ContentPackage, ImmutableList<ContentPackage>> _packagesDependencies = new();
     private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
     private readonly Dictionary<Guid, List<IAssemblyPlugin>> _loadedPlugins = new ();
+    private readonly Dictionary<Guid, Type> _pluginTypes = new();
     private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
+    private readonly AssemblyManager _assemblyManager;
+    private bool _pluginsLoaded = false;
+    private DateTime _assemblyUnloadStartTime;
 
 
     #endregion
@@ -88,8 +96,6 @@ public class CsPackageManager : IDisposable
 
     public void Dispose()
     {
-        if (!IsLoaded)
-            return;
         // send events for cleanup
         OnDispose?.Invoke();
         // cleanup events
@@ -101,12 +107,40 @@ public class CsPackageManager : IDisposable
             }
         }
         
+        // cleanup plugins and assemblies
+        UnloadPlugins();
+        
+        
+        // try cleaning up the assemblies
+        _pluginTypes.Clear();   // remove assembly references
+        _loadedPlugins.Clear();
+
+        _assemblyUnloadStartTime = DateTime.Now;
+        // we can't wait forever or app dies but we can try to be graceful
+        while (!_assemblyManager.TryBeginDispose())
+        {
+            if (_assemblyUnloadStartTime.AddSeconds(_assemblyUnloadTimeoutSeconds) > DateTime.Now)
+            {
+                break;
+            }
+        }
+        
+        _assemblyUnloadStartTime = DateTime.Now;
+        while (!_assemblyManager.FinalizeDispose())
+        {
+            if (_assemblyUnloadStartTime.AddSeconds(_assemblyUnloadTimeoutSeconds) > DateTime.Now)
+            {
+                break;
+            }
+        }
+
+
         // clear lists after cleaning up
         _packagesDependencies.Clear();
         _loadedCompiledPackageAssemblies.Clear();
         _packageRunConfigs.Clear();
-        _loadedPlugins.Clear();
-        
+        _currentPackagesByLoadOrder.Clear();
+
         IsLoaded = false;
         throw new NotImplementedException();
     }
@@ -139,7 +173,8 @@ public class CsPackageManager : IDisposable
             ModUtils.Logging.PrintMessage($"{nameof(CsPackageManager)}: Unable to create reliable dependencies map.");
         }
         _packagesDependencies.AddRange(packDeps);
-        _currentPackagesByLoadOrder.Clear();
+
+        List<ContentPackage> packagesToLoadInOrder = new();
 
         // build load order
         if (OrderAndFilterPackagesByDependencies(
@@ -148,7 +183,7 @@ public class CsPackageManager : IDisposable
                 out var cannotLoadPackages,
                 null))
         {
-            _currentPackagesByLoadOrder.AddRange(readyToLoad);
+            packagesToLoadInOrder.AddRange(readyToLoad);
             if (cannotLoadPackages is not null)
             {
                 ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the following mods due to dependency errors:");
@@ -161,43 +196,164 @@ public class CsPackageManager : IDisposable
         else
         {
             // use unsorted list on failure and send error message.
-            _currentPackagesByLoadOrder.AddRange(_packagesDependencies.Select( p=> p.Key));
+            packagesToLoadInOrder.AddRange(_packagesDependencies.Select( p=> p.Key));
             ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to create a reliable load order. Defaulting to unordered loading!");
         }
         
-        // get assemblies' filepaths from packages
-        var assembliesToLoad = _currentPackagesByLoadOrder
-            .Select(cp => new KeyValuePair<ContentPackage, ImmutableList<string>>(
+        // get assemblies and scripts' filepaths from packages
+        var toLoad = packagesToLoadInOrder
+            .Select(cp => new KeyValuePair<ContentPackage, LoadableData>(
                 cp,
-                TryScanPackagesForAssemblies(cp, out var list) ? list : null));
+                new LoadableData(
+                    TryScanPackagesForAssemblies(cp, out var list1) ? list1 : null,
+                    TryScanPackageForScripts(cp, out var list2) ? list2 : null)))
+            .ToImmutableDictionary();
+        
+        HashSet<ContentPackage> badPackages = new();
+        foreach (var pair in toLoad)
+        {
+            // check if unloadable
+            if (badPackages.Contains(pair.Key))
+                continue;
 
-        // get scripts' filepaths from packages
-        var scriptsToLoad = _currentPackagesByLoadOrder
-            .Select(cp => new KeyValuePair<ContentPackage, ImmutableList<string>>(
-                cp,
-                TryScanPackageForScripts(cp, out var list) ? list : null));
+            // try load binary assemblies
+            var id = Guid.Empty;    // id for the ACL for this package defined by AssemblyManager.
+            var successState = _assemblyManager.LoadAssembliesFromLocations(pair.Value.AssembliesFilePaths, ref id);
+            // error
+            if (successState is not AssemblyLoadingSuccessState.Success)
+            {
+                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the binary assemblies for package {pair.Key.Name}. Error: {successState.ToString()}");
+                UpdatePackagesToDisable(ref badPackages, pair.Key);
+                continue;
+            }
+            
+            // try compile scripts to assemblies
+            List<SyntaxTree> syntaxTrees = new();
+            
+            syntaxTrees.Add(GetPackageScriptImports());
+            bool abortPackage = false;
+            // load scripts data from files
+            foreach (string scriptPath in pair.Value.ScriptsFilePaths)
+            {
+                var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText);
+                // could not load file data
+                if (state is not ModUtils.IO.IOActionResultState.Success)
+                {
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {state.ToString()}");
+                    UpdatePackagesToDisable(ref badPackages, pair.Key);
+                    abortPackage = true;
+                    break;
+                }
 
-        // load assemblies
+                try
+                {
+                    CancellationToken token = new();
+                    syntaxTrees.Add(SyntaxFactory.ParseSyntaxTree(fileText, ScriptParseOptions, scriptPath, Encoding.Default, token));
+                    // cancel if parsing failed
+                    if (token.IsCancellationRequested)
+                    {
+                        ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: Syntax Parse Error.");
+                        UpdatePackagesToDisable(ref badPackages, pair.Key);
+                        abortPackage = true;
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    // unknown error
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to load the script files for package {pair.Key.Name}. Error: {e.Message}");
+                    UpdatePackagesToDisable(ref badPackages, pair.Key);
+                    abortPackage = true;
+                    break;
+                }
+                
+            }
+            if (abortPackage)
+                continue;
+            
+            // try compile
+            successState = _assemblyManager.LoadAssemblyFromMemory(
+                pair.Key.Name.Replace(" ",""), 
+                syntaxTrees, 
+                null, 
+                CompilationOptions, 
+                ref id);
 
+            if (successState is not AssemblyLoadingSuccessState.Success)
+            {
+                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Unable to compile script assembly for package {pair.Key.Name}. Error: {successState.ToString()}");
+                UpdatePackagesToDisable(ref badPackages, pair.Key);
+                continue;
+            }
+            
+            _loadedCompiledPackageAssemblies.Add(pair.Key, id);
+        }
 
-        // compile scripts to assemblies
+        // update loaded packages to exclude bad packages
+        _currentPackagesByLoadOrder.AddRange(toLoad
+            .Where(p => !badPackages.Contains(p.Key))
+            .Select(p => p.Key));
 
+        // search for plugins & instantiate them
+        foreach (var pair in _loadedCompiledPackageAssemblies)
+        {
+            if (_assemblyManager.TryGetSubTypesFromACL<IAssemblyPlugin>(pair.Value, out var types))
+            {
+                if (!_loadedPlugins.ContainsKey(pair.Value))
+                    _loadedPlugins.Add(pair.Value, new List<IAssemblyPlugin>());
+                else if (_loadedPlugins[pair.Value] is null)
+                    _loadedPlugins[pair.Value] = new List<IAssemblyPlugin>();
 
-        // search for plugins
-
-
-        // begin plugin execution
+                foreach (Type type in types)
+                {
+                    _loadedPlugins[pair.Value].Add((IAssemblyPlugin)Activator.CreateInstance(type));
+                }
+            }
+        }
 
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
         {
             throw new NotImplementedException();
         }
+
+        void UpdatePackagesToDisable(ref HashSet<ContentPackage> list, in ContentPackage newDisabledPackage)
+        {
+            throw new NotImplementedException();
+        }
+
+        throw new NotImplementedException();
     }
 
     #endregion
 
     #region INTERNALS
+
+    private void LoadPlugins(bool force = false)
+    {
+        if (_pluginsLoaded)
+        {
+            if (force)
+                UnloadPlugins();
+            else
+            {
+                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to load plugins when they were already loaded!");
+                return;
+            }
+        }
+        
+        
+    }
+
+    private void UnloadPlugins()
+    {
+        
+    }
+    
+    internal CsPackageManager([NotNull] AssemblyManager assemblyManager)
+    {
+        this._assemblyManager = assemblyManager;
+    }
 
     private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
     {
@@ -400,6 +556,8 @@ public class CsPackageManager : IDisposable
         Completed,
         BadPackage
     }
+
+    private record LoadableData(ImmutableList<string> AssembliesFilePaths, ImmutableList<string> ScriptsFilePaths);
 
     #endregion
 }
