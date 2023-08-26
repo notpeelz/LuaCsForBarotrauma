@@ -55,8 +55,8 @@ public sealed class RunConfig
         static string SanitizeRunSetting(string str) =>
             str switch
             {
-                null => "Standard",
-                "" => "Standard",
+                null => "None",
+                "" => "None",
                 _ => str[0].ToString().ToUpper() + str.Substring(1).ToLower()
             };
 

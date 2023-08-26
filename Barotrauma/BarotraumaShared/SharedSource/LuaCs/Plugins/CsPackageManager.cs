@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -30,10 +31,28 @@ public class CsPackageManager : IDisposable
             ,"DEBUG"
 #endif
         });
-    
+
+#if WINDOWS
+    private static readonly string PLATFORM_TARGET = "Windows";
+#elif OSX
+    private static readonly string PLATFORM_TARGET = "OSX";
+#elif LINUX
+    private static readonly string PLATFORM_TARGET = "Linux";
+#endif
+
+#if CLIENT
+    private static readonly string ARCHITECTURE_TARGET = "Client";
+#elif SERVER
+    private static readonly string ARCHITECTURE_TARGET = "Server";
+#endif
+
     private static readonly CSharpCompilationOptions CompilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
         .WithMetadataImportOptions(MetadataImportOptions.All)
+#if DEBUG
+        .WithOptimizationLevel(OptimizationLevel.Debug)
+#else
         .WithOptimizationLevel(OptimizationLevel.Release)
+#endif
         .WithAllowUnsafe(true);
     
     private static readonly SyntaxTree BaseAssemblyImports = CSharpSyntaxTree.ParseText(
@@ -48,8 +67,10 @@ public class CsPackageManager : IDisposable
 
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
     private readonly Dictionary<ContentPackage, List<ContentPackage>> _packagesDependencies = new();
-    private readonly Dictionary<ContentPackage, MemoryFileAssemblyContextLoader> _loadedCompiledPackageAssemblies = new();
-    private readonly Dictionary<ContentPackage, ImmutableList<MetadataReference>> _loadedPackageMetadada = new();
+    private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
+    private readonly Dictionary<Guid, List<IAssemblyPlugin>> _loadedPlugins = new ();
+    private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
+
 
     #endregion
 
@@ -77,6 +98,13 @@ public class CsPackageManager : IDisposable
                 OnDispose -= (del as System.Action);
             }
         }
+        
+        // clear lists after cleaning up
+        _packagesDependencies.Clear();
+        _loadedCompiledPackageAssemblies.Clear();
+        _packageRunConfigs.Clear();
+        _loadedPlugins.Clear();
+        
         IsLoaded = false;
         throw new NotImplementedException();
     }
@@ -90,14 +118,58 @@ public class CsPackageManager : IDisposable
         }
 
         // get packages
+        IEnumerable<ContentPackage> packages = BuildPackagesList();
+        
+        _packagesDependencies.Clear();
+        _loadedCompiledPackageAssemblies.Clear();
+        _packageRunConfigs.Clear();
+        
+        // check and load config
+        
+        
+        // filter not to be loaded
+        
+        
         // build load order
-        // get assemblies from packages
-    } 
+        
+        
+        // get assemblies' filepaths from packages
+        
+        
+        // get scripts' filepaths from packages
+        
+        
+        // load assemblies
+        
+        
+        // compile scripts to assemblies
+        
+        
+        // search for plugins
+        
+        
+        // begin plugin execution
+    }
 
     #endregion
 
     #region INTERNALS
 
+    private static bool TryScanPackageForScripts(ContentPackage package, out IEnumerable<string> scriptFilePaths)
+    {
+        
+    }
+
+    private static bool TryScanPackagesForAssemblies(ContentPackage package, out IEnumerable<string> assemblyFilePaths)
+    {
+        
+    }
+
+    private static bool TryGetRunConfigForPackage(ContentPackage package, out RunConfig config)
+    {
+        
+    }
+    
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
     private IEnumerable<ContentPackage> BuildPackagesList()
