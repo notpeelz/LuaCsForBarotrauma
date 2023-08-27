@@ -4,6 +4,7 @@ using MoonSharp.Interpreter;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -259,6 +260,10 @@ namespace Barotrauma
         private static Type[] LoadDocTypes(XElement typesElem)
         {
             var result = new List<Type>();
+            var loadedTypes = GameMain.LuaCs.AssemblyManager
+                .GetAllTypesInLoadedAssemblies()
+                .ToImmutableHashSet();
+
             foreach (var elem in typesElem.Elements())
             {
                 var type = Type.GetType(elem.Value);
@@ -266,7 +271,10 @@ namespace Barotrauma
                 if (type == null) throw new Exception($"Type {elem.Value} not found.");
                 result.Add(type);
 
+                var targetType = loadedTypes.Where(t => t.Name.EndsWith(elem.Value))
             }
+
+            
             return result.ToArray();
         }
 

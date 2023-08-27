@@ -1596,12 +1596,6 @@
     <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\TargetPlatform.cs">
       <Link>SharedSource\LuaCs\Plugins\TargetPlatform.cs</Link>
     </Compile>
-    <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\_CsScriptLoader.cs">
-      <Link>SharedSource\LuaCs\Plugins\_CsScriptLoader.cs</Link>
-    </Compile>
-    <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\_PluginHelper.cs">
-      <Link>SharedSource\LuaCs\Plugins\_PluginHelper.cs</Link>
-    </Compile>
     <Compile Include="..\BarotraumaShared\SharedSource\Map\CoreEntityPrefab.cs">
       <Link>SharedSource\Map\CoreEntityPrefab.cs</Link>
     </Compile>

@@ -106,34 +106,10 @@ namespace Barotrauma
             }
         }
 
+        [Obsolete("Use AssemblyManager::GetTypesByName()")]
         public static Type GetType(string typeName, bool throwOnError = false, bool ignoreCase = false)
         {
-            if (typeName == null || typeName.Length == 0) { return null; }
-
-            var byRef = false;
-            if (typeName.StartsWith("out ") || typeName.StartsWith("ref "))
-            {
-                typeName = typeName.Remove(0, 4);
-                byRef = true;
-            }
-
-            var type = Type.GetType(typeName, throwOnError, ignoreCase);
-            if (type != null) { return byRef ? type.MakeByRefType() : type; }
-            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                if (CsScriptBase.LoadedAssemblyName.Contains(a.GetName().Name))
-                {
-                    var attrs = a.GetCustomAttributes<AssemblyMetadataAttribute>();
-                    var revision = attrs.FirstOrDefault(attr => attr.Key == "Revision")?.Value;
-                    if (revision != null && int.Parse(revision) != (int)CsScriptBase.Revision[a.GetName().Name]) { continue; }
-                }
-                type = a.GetType(typeName, throwOnError, ignoreCase);
-                if (type != null)
-                {
-                    return byRef ? type.MakeByRefType() : type;
-                }
-            }
-            return null;
+            return GameMain.LuaCs.AssemblyManager.GetTypesByName(typeName).FirstOrDefault((Type)null);
         }
 
         public void ToggleDebugger(int port = 41912)
@@ -293,7 +269,7 @@ namespace Barotrauma
 
         public void Stop()
         {
-            foreach (var type in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name == CsScriptBase.CsScriptAssembly).SelectMany(assembly => assembly.GetTypes()))
+            /*foreach (var type in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name == CsScriptBase.CsScriptAssembly).SelectMany(assembly => assembly.GetTypes()))
             {
                 UserData.UnregisterType(type, true);
             }
@@ -304,7 +280,17 @@ namespace Barotrauma
             }
             
             ACsMod.LoadedMods.Clear();
+            */
 
+            // unregister types
+            foreach (Type type in AssemblyManager.GetAllTypesInLoadedAssemblies())
+            {
+                UserData.UnregisterType(type, true);
+            }
+            
+            // unload plugins, etc.
+            PackageManager.Dispose();
+            
             if (Thread.CurrentThread == GameMain.MainThread) 
             {
                 Hook?.Call("stop");
@@ -317,7 +303,7 @@ namespace Barotrauma
 
             Game?.Stop();
 
-            Hook.Clear();
+            Hook?.Clear();
             ModStore.Clear();
             Game = new LuaGame();
             Networking = new LuaCsNetworking();
@@ -326,13 +312,6 @@ namespace Barotrauma
             PerformanceCounter = new LuaCsPerformanceCounter();
             LuaScriptLoader = null;
             Lua = null;
-
-            if (CsScriptLoader != null)
-            {
-                CsScriptLoader.Clear();
-                CsScriptLoader.Unload();
-                CsScriptLoader = null;
-            }
         }
 
         public void Initialize(bool forceEnableCs = false)
@@ -430,28 +409,20 @@ namespace Barotrauma
                     DebugConsole.AddWarning("Cs package active! Cs mods are NOT sandboxed, use it at your own risk!");
                 }
 
-                CsScriptLoader = new CsScriptLoader();
-                CsScriptLoader.SearchFolders();
-                if (CsScriptLoader.HasSources)
+                AssemblyManager ??= new AssemblyManager();
+                PackageManager ??= new CsPackageManager(AssemblyManager);
+                try
                 {
-                    try
-                    {
-                        Stopwatch compilationTime = new Stopwatch();
-                        compilationTime.Start();
-                        var modTypes = CsScriptLoader.Compile();
-
-                        modTypes.ForEach(t =>
-                        {
-                            t.GetConstructor(new Type[] { })?.Invoke(null);
-                        });
-
-                        compilationTime.Stop();
-                        LuaCsLogger.LogMessage($"Took {compilationTime.ElapsedMilliseconds}ms to compile and run Cs Scripts.");
-                    }
-                    catch (Exception ex)
-                    {
-                        LuaCsLogger.HandleException(ex, LuaCsMessageOrigin.CSharpMod);
-                    }
+                    Stopwatch taskTimer = new();
+                    if (PackageManager.IsLoaded)
+                        PackageManager.Dispose();
+                    PackageManager.LoadAssemblyPackages();
+                    taskTimer.Stop();
+                    ModUtils.Logging.PrintMessage($"{nameof(LuaCsSetup)}: Completed assembly loading. Total time {taskTimer.ElapsedMilliseconds}ms.");
+                }
+                catch (Exception e)
+                {
+                    ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}::{nameof(Initialize)}() | Error while loading assemblies!");
                 }
 
             }

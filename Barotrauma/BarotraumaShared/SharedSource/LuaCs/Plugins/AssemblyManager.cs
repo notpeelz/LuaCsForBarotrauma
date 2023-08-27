@@ -111,7 +111,8 @@ public partial class AssemblyManager
         OpsLockLoaded.EnterReadLock();
         try
         {
-            return typeof(AssemblyManager).Assembly.GetSafeTypes()
+            return AssemblyLoadContext.Default.Assemblies
+                .SelectMany(a => a.GetSafeTypes())
                 .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface)
                 .Concat(LoadedACLs
                     .SelectMany(kvp => kvp.Value.GetAssembliesTypes()
@@ -144,18 +145,19 @@ public partial class AssemblyManager
     /// <summary>
     /// Allows iteration over all non-interface types in all loaded assemblies in the AsmMgr who's names contain the string.
     /// </summary>
-    /// <param name="name">The string name of the type to search for</param>
+    /// <param name="name">The string name of the type to search for, search uses EndsWith()</param>
     /// <returns>An Enumerator for matching types.</returns>
-    public IEnumerable<Type> GetMatchingTypesInLoadedAssemblies(string name)
+    public IEnumerable<Type> GetTypesByName(string name)
     {
         OpsLockLoaded.EnterReadLock();
         try
         {
-            return typeof(AssemblyManager).Assembly.GetSafeTypes()
-                .Where(t => t.Name.Equals(name) && !t.IsInterface)
+            return AssemblyLoadContext.Default.Assemblies
+                .SelectMany(a => a.GetSafeTypes())
+                .Where(t => t.Name.EndsWith(name) && !t.IsInterface)
                 .Concat(LoadedACLs
                     .SelectMany(kvp => kvp.Value.GetAssembliesTypes()
-                        .Where(t => t.Name.Equals(name) && !t.IsInterface)))
+                        .Where(t => t.Name.EndsWith(name) && !t.IsInterface)))
                 .ToImmutableList();
         }
         finally
@@ -173,7 +175,8 @@ public partial class AssemblyManager
         OpsLockLoaded.EnterReadLock();
         try
         {
-            return typeof(AssemblyManager).Assembly.GetSafeTypes()
+            return AssemblyLoadContext.Default.Assemblies
+                .SelectMany(a => a.GetSafeTypes())
                 .Concat(LoadedACLs
                     .SelectMany(kvp => kvp.Value.GetAssembliesTypes()))
                 .ToImmutableList();

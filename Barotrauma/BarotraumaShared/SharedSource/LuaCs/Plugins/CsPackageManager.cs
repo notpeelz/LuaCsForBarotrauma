@@ -118,6 +118,7 @@ public sealed class CsPackageManager : IDisposable
         _loadedPlugins.Clear();
 
         _assemblyUnloadStartTime = DateTime.Now;
+        
         // we can't wait forever or app dies but we can try to be graceful
         while (!_assemblyManager.TryBeginDispose())
         {
@@ -144,14 +145,13 @@ public sealed class CsPackageManager : IDisposable
         _currentPackagesByLoadOrder.Clear();
 
         IsLoaded = false;
-        throw new NotImplementedException();
     }
 
-    public AssemblyLoadingSuccessState BeginPackageLoading()
+    public AssemblyLoadingSuccessState LoadAssemblyPackages()
     {
         if (IsLoaded)
         {
-            LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(BeginPackageLoading)}() | Attempted to load packages when already loaded!");
+            LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(LoadAssemblyPackages)}() | Attempted to load packages when already loaded!");
             return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
         
@@ -439,6 +439,7 @@ public sealed class CsPackageManager : IDisposable
                 else if (_loadedPlugins[pair.Key] is null)
                     _loadedPlugins[pair.Key] = new();
                 _loadedPlugins[pair.Key].Add((IAssemblyPlugin)Activator.CreateInstance(type));
+                ModUtils.Logging.PrintMessage($"Loaded the plugin of type: {type}");
             }
 
             // bootstrap
@@ -491,7 +492,7 @@ public sealed class CsPackageManager : IDisposable
     /// <returns>True if all dependencies were found.</returns>
     private static bool TryBuildDependenciesMap(ImmutableList<ContentPackage> packages, out Dictionary<ContentPackage, List<ContentPackage>> dependenciesMap)
     {
-        bool reliableMap = true;    // all deps were found.
+        bool reliableMap = true;    // remains true if all deps were found.
         dependenciesMap = new();
         foreach (var package in packages)
         {
