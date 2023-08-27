@@ -199,8 +199,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
 
         return AssemblyLoadingSuccessState.Success;
     }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract")]
     protected override Assembly Load(AssemblyName assemblyName)
     {
@@ -217,12 +216,14 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             if (ass is not null)
                 return ass;
 
+            // resolve to local folders
             foreach (KeyValuePair<string,AssemblyDependencyResolver> pair in _dependencyResolvers)
             {
                 var asspath = pair.Value.ResolveAssemblyToPath(assemblyName);
                 if (asspath is null)
                     continue;
                 ass = LoadFromAssemblyPath(asspath);
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (ass is not null)
                     return ass;
             }

@@ -266,15 +266,16 @@ namespace Barotrauma
 
             foreach (var elem in typesElem.Elements())
             {
-                var type = Type.GetType(elem.Value);
-                if (type == null && GameMain.LuaCs?.CsScriptLoader?.Assembly != null) type = GameMain.LuaCs.CsScriptLoader.Assembly.GetType(elem.Value);
-                if (type == null) throw new Exception($"Type {elem.Value} not found.");
-                result.Add(type);
-
-                var targetType = loadedTypes.Where(t => t.Name.EndsWith(elem.Value))
+                var typesFound = loadedTypes.Where(t => t.Name.EndsWith(elem.Value)).ToImmutableList();
+                if (!typesFound.Any())
+                {
+                    ModUtils.Logging.PrintError(
+                        $"{nameof(LuaCsConfig)}::{nameof(LoadDocTypes)}() | Unable to find a matching type for {elem.Value}");
+                    continue;
+                }
+                result.AddRange(typesFound);
             }
 
-            
             return result.ToArray();
         }
 
