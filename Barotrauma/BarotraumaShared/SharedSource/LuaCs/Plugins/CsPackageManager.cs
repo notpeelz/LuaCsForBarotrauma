@@ -38,7 +38,7 @@ public sealed class CsPackageManager : IDisposable
         });
 
 #if WINDOWS
-    private static readonly string PLATFORM_TARGET = "Windows";
+    private const string PLATFORM_TARGET = "Windows";
 #elif OSX
     private static readonly string PLATFORM_TARGET = "OSX";
 #elif LINUX
@@ -46,7 +46,7 @@ public sealed class CsPackageManager : IDisposable
 #endif
 
 #if CLIENT
-    private static readonly string ARCHITECTURE_TARGET = "Client";
+    private const string ARCHITECTURE_TARGET = "Client";
 #elif SERVER
     private static readonly string ARCHITECTURE_TARGET = "Server";
 #endif
@@ -70,8 +70,8 @@ public sealed class CsPackageManager : IDisposable
             .ToString(),
         ScriptParseOptions);
 
-    private static readonly string SCRIPT_FILE_REGEX = "*.cs";
-    private static readonly string ASSEMBLY_FILE_REGEX = "*.dll";
+    private const string SCRIPT_FILE_REGEX = "*.cs";
+    private const string ASSEMBLY_FILE_REGEX = "*.dll";
 
     private readonly float _assemblyUnloadTimeoutSeconds = 10f;
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
@@ -92,6 +92,47 @@ public sealed class CsPackageManager : IDisposable
     
     public bool IsLoaded { get; private set; }
     public IEnumerable<ContentPackage> GetCurrentPackagesByLoadOrder() => _currentPackagesByLoadOrder;
+
+    /// <summary>
+    /// Tries to find the content package that a given plugin belongs to. 
+    /// </summary>
+    /// <param name="package">Package if found, null otherwise.</param>
+    /// <typeparam name="T">The IAssemblyPlugin type to find.</typeparam>
+    /// <returns></returns>
+    public bool TryGetPackageForPlugin<T>(out ContentPackage package) where T : IAssemblyPlugin
+    {
+        package = null;
+        
+        var t = typeof(T);
+        var guid = _pluginTypes
+            .Where(kvp => kvp.Value.Contains(t))
+            .Select(kvp => kvp.Key)
+            .FirstOrDefault(Guid.Empty);
+
+        if (guid.Equals(Guid.Empty) || !_reverseLookupGuidList.ContainsKey(guid) || _reverseLookupGuidList[guid] is null)
+            return false;
+        package = _reverseLookupGuidList[guid];
+        return true;
+    }
+
+
+    /// <summary>
+    /// Tries to get the loaded plugins for a given package.
+    /// </summary>
+    /// <param name="package">Package to find.</param>
+    /// <param name="loadedPlugins">The collection of loaded plugins.</param>
+    /// <returns></returns>
+    public bool TryGetLoadedPluginsForPackage(ContentPackage package, out IEnumerable<IAssemblyPlugin> loadedPlugins)
+    {
+        loadedPlugins = null;
+        if (package is null || !_loadedCompiledPackageAssemblies.ContainsKey(package))
+            return false;
+        var guid = _loadedCompiledPackageAssemblies[package];
+        if (guid.Equals(Guid.Empty) || !_loadedPlugins.ContainsKey(guid))
+            return false;
+        loadedPlugins = _loadedPlugins[guid];
+        return true;
+    }
 
     /// <summary>
     /// Called when clean up is being performed. Use when relying on or making use of references from this manager.
@@ -166,6 +207,12 @@ public sealed class CsPackageManager : IDisposable
 
         // get packages
         IEnumerable<ContentPackage> packages = BuildPackagesList();
+
+#if DEBUG
+        #warning TODO: NEEDS TO BE REMOVED AFTER UPDATE IS LIVE!
+        //todo: remove after LuaCsForBarotrauma update hits the workshop!
+        packages = packages.Where(pack => !pack.Name.ToLowerInvariant().Replace(" ", "").Contains("moddingtoolkit"));   // bad mod :)
+#endif
 
         // check and load config
         _packageRunConfigs.AddRange(packages
@@ -422,7 +469,7 @@ public sealed class CsPackageManager : IDisposable
     {
         // get unique list of content packages. 
         // Note: there is an old issue where the AllPackages group
-        // would sometimes not contain packages downloaded from the host.
+        // would sometimes not contain packages downloaded from the host, so we union enabled.
         return ContentPackageManager.AllPackages.Union(ContentPackageManager.EnabledPackages.All);
     }
     
