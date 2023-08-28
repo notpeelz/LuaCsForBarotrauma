@@ -77,8 +77,9 @@ public sealed class CsPackageManager : IDisposable
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
     private readonly Dictionary<ContentPackage, ImmutableList<ContentPackage>> _packagesDependencies = new();
     private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
-    private readonly Dictionary<Guid, List<IAssemblyPlugin>> _loadedPlugins = new ();
-    private readonly Dictionary<Guid, ImmutableList<Type>> _pluginTypes = new(); // where Type : IAssemblyPlugin
+    private readonly Dictionary<Guid, ContentPackage> _reverseLookupGuidList = new();
+    private readonly Dictionary<Guid, HashSet<IAssemblyPlugin>> _loadedPlugins = new ();
+    private readonly Dictionary<Guid, ImmutableHashSet<Type>> _pluginTypes = new(); // where Type : IAssemblyPlugin
     private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
     private readonly AssemblyManager _assemblyManager;
     private bool _pluginsLoaded = false;
@@ -141,12 +142,17 @@ public sealed class CsPackageManager : IDisposable
         // clear lists after cleaning up
         _packagesDependencies.Clear();
         _loadedCompiledPackageAssemblies.Clear();
+        _reverseLookupGuidList.Clear();
         _packageRunConfigs.Clear();
         _currentPackagesByLoadOrder.Clear();
 
         IsLoaded = false;
     }
 
+    /// <summary>
+    /// Begins the loading process of scanning packages for scripts and binary assemblies, compiling and executing them.
+    /// </summary>
+    /// <returns></returns>
     public AssemblyLoadingSuccessState LoadAssemblyPackages()
     {
         if (IsLoaded)
@@ -303,6 +309,7 @@ public sealed class CsPackageManager : IDisposable
             if (id != Guid.Empty)
             {
                 _loadedCompiledPackageAssemblies.Add(pair.Key, id);
+                _reverseLookupGuidList.Add(id, pair.Key);
             }
         }
 
@@ -316,7 +323,7 @@ public sealed class CsPackageManager : IDisposable
         {
             if (_assemblyManager.TryGetSubTypesFromACL<IAssemblyPlugin>(pair.Value, out var types))
             {
-                _pluginTypes[pair.Value] = types.ToImmutableList();
+                _pluginTypes[pair.Value] = types.ToImmutableHashSet();
             }
         }
         
