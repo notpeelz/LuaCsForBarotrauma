@@ -223,57 +223,53 @@ public static class ModUtils
 
             return ioActionResultState;
         }
-        
+
         /// <summary>
-        /// Gets the RunConfig.xml for the given package located at [cp_root]/CSharp/RunConfig.xml.
-        /// Generates a default config if one is not found. 
+        /// 
         /// </summary>
-        /// <param name="package">The package to search for.</param>
-        /// <param name="config">RunConfig data.</param>
-        /// <returns>True if a config is loaded, false if one was created.</returns>
-        public static bool GetOrCreateRunConfig(ContentPackage package, out RunConfig config)
+        /// <param name="instance"></param>
+        /// <param name="filepath"></param>
+        /// <param name="typeFactory"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static bool LoadOrCreateTypeXml<T>(out T instance, 
+            string filepath, Func<T> typeFactory = null) where T : class, new()
         {
-            string filepath = System.IO.Path.Combine(package.Path, "CSharp", "RunConfig.xml");
-            if (ModUtils.IO.IOActionResultState.Success == ModUtils.IO.GetOrCreateFileText(
-                    filepath, out string fileText, () =>
+            instance = null;
+            filepath = filepath.CleanUpPath();
+            if (IOActionResultState.Success == GetOrCreateFileText(
+                    filepath, out string fileText, typeFactory is not null ? () =>
                     {
-                        using (StringWriter sw = new StringWriter())
+                        using StringWriter sw = new StringWriter();
+                        T t = typeFactory?.Invoke();
+                        if (t is not null)
                         {
-                            XmlSerializer s = new XmlSerializer(typeof(RunConfig));
-                            RunConfig r = new RunConfig().Sanitize();
-                            s.Serialize(sw, r);
+                            XmlSerializer s = new XmlSerializer(typeof(T));
+                            s.Serialize(sw, t);
                             return sw.ToString();
                         }
-                    }))
+                        return "";
+                    } : null))
             {
-                XmlSerializer s = new XmlSerializer(typeof(RunConfig));
+                XmlSerializer s = new XmlSerializer(typeof(T));
                 try
                 {
-                    using (TextReader tr = new StringReader(fileText))
-                    {
-                        config = (RunConfig)s.Deserialize(tr);
-                    }
-                    // Sanitization
-                    config?.Sanitize();
-
+                    using TextReader tr = new StringReader(fileText);
+                    instance = (T)s.Deserialize(tr);
                     return true;
                 }
                 catch(InvalidOperationException ioe)
                 {
-                    ModUtils.Logging.PrintError($"Error while parsing run config for {package.Name}, using defaults.");
+                    ModUtils.Logging.PrintError($"Error while parsing type data for {typeof(T)}.");
     #if DEBUG
                     ModUtils.Logging.PrintError($"Exception: {ioe.Message}. Details: {ioe.InnerException?.Message}");
     #endif
-                    config = new RunConfig().Sanitize();
+                    instance = null;
                     return false;
                 }
             }
 
-            config = new RunConfig().Sanitize();
-
             return false;
-
-            
         }
 
         public enum IOActionResultState

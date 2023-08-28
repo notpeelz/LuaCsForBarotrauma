@@ -404,9 +404,17 @@ namespace Barotrauma
                     Stopwatch taskTimer = new();
                     if (PackageManager.IsLoaded)
                         PackageManager.Dispose();
-                    PackageManager.LoadAssemblyPackages();
+                    var state = PackageManager.LoadAssemblyPackages();
                     taskTimer.Stop();
-                    ModUtils.Logging.PrintMessage($"{nameof(LuaCsSetup)}: Completed assembly loading. Total time {taskTimer.ElapsedMilliseconds}ms.");
+                    if (state is not AssemblyLoadingSuccessState.Success)
+                    {
+                        ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}: Error while loading Cs-Assembly Mods | Err: {state}");
+                        PackageManager.Dispose();   // cleanup
+                    }
+                    else
+                    {
+                        ModUtils.Logging.PrintMessage($"{nameof(LuaCsSetup)}: Completed assembly loading. Total time {taskTimer.ElapsedMilliseconds}ms.");
+                    }
                 }
                 catch (Exception e)
                 {
