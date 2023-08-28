@@ -413,7 +413,10 @@ public sealed class CsPackageManager : IDisposable
     
     private IEnumerable<ContentPackage> BuildPackagesList()
     {
-        return ContentPackageManager.AllPackages.Concat(ContentPackageManager.EnabledPackages.All);
+        // get unique list of content packages. 
+        // Note: there is an old issue where the AllPackages group
+        // would sometimes not contain packages downloaded from the host.
+        return ContentPackageManager.AllPackages.Union(ContentPackageManager.EnabledPackages.All);
     }
     
     private void LoadPlugins(bool force = false)

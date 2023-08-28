@@ -269,18 +269,6 @@ namespace Barotrauma
 
         public void Stop()
         {
-            /*foreach (var type in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.GetName().Name == CsScriptBase.CsScriptAssembly).SelectMany(assembly => assembly.GetTypes()))
-            {
-                UserData.UnregisterType(type, true);
-            }
-
-            foreach (var mod in ACsMod.LoadedMods.ToArray())
-            {
-                mod.Dispose();
-            }
-            
-            ACsMod.LoadedMods.Clear();
-            */
 
             // unregister types
             foreach (Type type in AssemblyManager.GetAllTypesInLoadedAssemblies())
