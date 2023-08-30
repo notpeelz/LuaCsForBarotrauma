@@ -193,6 +193,7 @@ public partial class AssemblyManager
 
     /// <summary>
     /// Allows iteration over all types (including interfaces) in all loaded assemblies managed by the AsmMgr.
+    /// Warning: High usage may result in performance issues.
     /// </summary>
     /// <returns>An Enumerator for iteration.</returns>
     public IEnumerable<Type> GetAllTypesInLoadedAssemblies()

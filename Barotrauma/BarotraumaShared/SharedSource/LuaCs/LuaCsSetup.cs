@@ -65,8 +65,11 @@ namespace Barotrauma
         public LuaCsSteam Steam { get; private set; }
         public LuaCsPerformanceCounter PerformanceCounter { get; private set; }
 
-        public AssemblyManager AssemblyManager { get; private set; }
-        public CsPackageManager PackageManager { get; private set; }
+        // must be available at anytime
+        private static AssemblyManager _assemblyManager;
+        public static AssemblyManager AssemblyManager => _assemblyManager ??= new AssemblyManager();
+        private CsPackageManager _packageManager;
+        public CsPackageManager PackageManager => _packageManager ??= new CsPackageManager(AssemblyManager);
 
         public LuaCsModStore ModStore { get; private set; }
         private LuaRequire require { get; set; }
@@ -115,7 +118,7 @@ namespace Barotrauma
         [Obsolete("Use AssemblyManager::GetTypesByName()")]
         public static Type GetType(string typeName, bool throwOnError = false, bool ignoreCase = false)
         {
-            return GameMain.LuaCs?.AssemblyManager?.GetTypesByName(typeName).FirstOrDefault((Type)null);
+            return AssemblyManager?.GetTypesByName(typeName).FirstOrDefault((Type)null);
         }
 
         public void ToggleDebugger(int port = 41912)
@@ -285,8 +288,11 @@ namespace Barotrauma
             // unload plugins, etc.
             PackageManager.Dispose();
 
-            Lua.Globals["CsPackageManager"] = null;
-            Lua.Globals["AssemblyManager"] = null;
+            if (Lua?.Globals is not null)
+            {
+                Lua.Globals.Remove("CsPackageManager");
+                Lua.Globals.Remove("AssemblyManager");
+            }
 
             if (Thread.CurrentThread == GameMain.MainThread) 
             {
@@ -409,8 +415,6 @@ namespace Barotrauma
                     DebugConsole.AddWarning("Cs package active! Cs mods are NOT sandboxed, use it at your own risk!");
                 }
 
-                AssemblyManager ??= new AssemblyManager();
-                PackageManager ??= new CsPackageManager(AssemblyManager);
                 Lua.Globals["CsPackageManager"] = PackageManager;
                 Lua.Globals["AssemblyManager"] = AssemblyManager;
                 
