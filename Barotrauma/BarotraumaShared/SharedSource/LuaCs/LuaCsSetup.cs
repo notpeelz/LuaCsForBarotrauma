@@ -275,10 +275,13 @@ namespace Barotrauma
             {
                 UserData.UnregisterType(type, true);
             }
-            
+
             // unload plugins, etc.
             PackageManager.Dispose();
-            
+
+            Lua.Globals["CsPackageManager"] = null;
+            Lua.Globals["AssemblyManager"] = null;
+
             if (Thread.CurrentThread == GameMain.MainThread) 
             {
                 Hook?.Call("stop");
@@ -347,6 +350,9 @@ namespace Barotrauma
             UserData.RegisterType<LuaUserData>();
             UserData.RegisterType<LuaCsPerformanceCounter>();
             UserData.RegisterType<IUserDataDescriptor>();
+            UserData.RegisterType<CsPackageManager>();
+            UserData.RegisterType<AssemblyManager>();
+            UserData.RegisterType<IAssemblyPlugin>();
 
             UserData.RegisterExtensionType(typeof(MathUtils));
             UserData.RegisterExtensionType(typeof(XMLExtensions));
@@ -399,6 +405,9 @@ namespace Barotrauma
 
                 AssemblyManager ??= new AssemblyManager();
                 PackageManager ??= new CsPackageManager(AssemblyManager);
+                Lua.Globals["CsPackageManager"] = PackageManager;
+                Lua.Globals["AssemblyManager"] = AssemblyManager;
+                
                 try
                 {
                     Stopwatch taskTimer = new();
@@ -426,36 +435,36 @@ namespace Barotrauma
 
             ContentPackage luaPackage = GetPackage(LuaForBarotraumaId);
 
-            void runLocal()
+            void RunLocal()
             {
                 LuaCsLogger.LogMessage("Using LuaSetup.lua from the Barotrauma Lua/ folder.");
                 string luaPath = LuaSetupFile;
                 CallLuaFunction(Lua.LoadFile(luaPath), Path.GetDirectoryName(Path.GetFullPath(luaPath)));
             }
 
-            void runWorkshop()
+            void RunWorkshop()
             {
                 LuaCsLogger.LogMessage("Using LuaSetup.lua from the content package.");
                 string luaPath = Path.Combine(Path.GetDirectoryName(luaPackage.Path), "Binary/Lua/LuaSetup.lua");
                 CallLuaFunction(Lua.LoadFile(luaPath), Path.GetDirectoryName(Path.GetFullPath(luaPath)));
             }
 
-            void runNone()
+            void RunNone()
             {
                 LuaCsLogger.LogError("LuaSetup.lua not found! Lua/LuaSetup.lua, no Lua scripts will be executed or work.", LuaCsMessageOrigin.LuaMod);
             }
 
             if (Config.PreferToUseWorkshopLuaSetup)
             {
-                if (luaPackage != null) { runWorkshop(); }
-                else if (File.Exists(LuaSetupFile)) { runLocal(); }
-                else { runNone(); }
+                if (luaPackage != null) { RunWorkshop(); }
+                else if (File.Exists(LuaSetupFile)) { RunLocal(); }
+                else { RunNone(); }
             }
             else
             {
-                if (File.Exists(LuaSetupFile)) { runLocal(); }
-                else if (luaPackage != null) { runWorkshop(); }
-                else { runNone(); }
+                if (File.Exists(LuaSetupFile)) { RunLocal(); }
+                else if (luaPackage != null) { RunWorkshop(); }
+                else { RunNone(); }
             }
 
             executionNumber++;

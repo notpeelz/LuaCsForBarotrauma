@@ -125,7 +125,13 @@ public partial class AssemblyManager
         }
     }
 
-    
+    /// <summary>
+    /// Tries to get types assignable to type from the ACL given the Guid.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="types"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
     public bool TryGetSubTypesFromACL<T>(Guid id, out IEnumerable<Type> types)
     {
         Type targetType = typeof(T);
@@ -134,6 +140,25 @@ public partial class AssemblyManager
         {
             types = acl.GetAssembliesTypes()
                 .Where(t => targetType.IsAssignableFrom(t) && !t.IsInterface);
+            return true;
+        }
+
+        types = null;
+        return false;
+    }
+    
+    /// <summary>
+    /// Tries to get types from the ACL given the Guid.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="types"></param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public bool TryGetSubTypesFromACL(Guid id, out IEnumerable<Type> types)
+    {
+        if (TryGetACL(id, out var acl))
+        {
+            types = acl.GetAssembliesTypes();
             return true;
         }
 

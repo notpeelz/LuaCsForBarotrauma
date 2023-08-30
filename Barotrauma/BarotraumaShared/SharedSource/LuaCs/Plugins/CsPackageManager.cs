@@ -81,6 +81,7 @@ public sealed class CsPackageManager : IDisposable
     private readonly Dictionary<Guid, HashSet<IAssemblyPlugin>> _loadedPlugins = new ();
     private readonly Dictionary<Guid, ImmutableHashSet<Type>> _pluginTypes = new(); // where Type : IAssemblyPlugin
     private readonly Dictionary<ContentPackage, RunConfig> _packageRunConfigs = new();
+    private readonly Dictionary<Guid, ImmutableList<Type>> _luaRegisteredTypes = new();
     private readonly AssemblyManager _assemblyManager;
     private bool _pluginsLoaded = false;
     private DateTime _assemblyUnloadStartTime;
@@ -89,6 +90,48 @@ public sealed class CsPackageManager : IDisposable
     #endregion
 
     #region PUBLIC_API
+
+    #region LUA_EXTENSIONS
+
+    /// <summary>
+    /// Searches for all types in all loaded assemblies from content packages who's names contain the name string and registers them with the Lua Interpreter. 
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="caseSensitive"></param>
+    /// <returns></returns>
+    public bool LuaTryRegisterPackageTypes(string name, bool caseSensitive = false)
+    {
+        if (!IsLoaded)
+            return false;
+        var matchingPacks = _loadedCompiledPackageAssemblies
+            .Where(kvp => kvp.Key.Name.ToLowerInvariant().Contains(name.ToLowerInvariant()))
+            .Select(kvp => kvp.Value)
+            .ToImmutableList();
+        if (!matchingPacks.Any())
+            return false;
+        var types = matchingPacks
+            .Where(guid => !_luaRegisteredTypes.ContainsKey(guid))
+            .Select(guid => new KeyValuePair<Guid, ImmutableList<Type>>(
+                guid, 
+                _assemblyManager.TryGetSubTypesFromACL(guid, out var types) 
+                    ? types.ToImmutableList()
+                    : ImmutableList<Type>.Empty))
+            .ToImmutableList();
+        if (!types.Any())
+            return false;
+        foreach (var kvp in types)
+        {
+            _luaRegisteredTypes[kvp.Key] = kvp.Value;
+            foreach (Type type in kvp.Value)
+            {
+                MoonSharp.Interpreter.UserData.RegisterType(type);
+            }
+        }
+
+        return true;
+    }
+
+    #endregion
     
     public bool IsLoaded { get; private set; }
     public IEnumerable<ContentPackage> GetCurrentPackagesByLoadOrder() => _currentPackagesByLoadOrder;
@@ -158,6 +201,16 @@ public sealed class CsPackageManager : IDisposable
         // try cleaning up the assemblies
         _pluginTypes.Clear();   // remove assembly references
         _loadedPlugins.Clear();
+
+        // lua cleanup
+        foreach (var kvp in _luaRegisteredTypes)
+        {
+            foreach (Type type in kvp.Value)
+            {
+                MoonSharp.Interpreter.UserData.UnregisterType(type);
+            }
+        }
+        _luaRegisteredTypes.Clear();
 
         _assemblyUnloadStartTime = DateTime.Now;
         
@@ -293,6 +346,7 @@ public sealed class CsPackageManager : IDisposable
             // try compile scripts to assemblies
             if (pair.Value.ScriptsFilePaths is not null && pair.Value.ScriptsFilePaths.Any())
             {
+                ModUtils.Logging.PrintMessage($"Loading scripts for CPackage {pair.Key.Name}");
                 List<SyntaxTree> syntaxTrees = new();
             
                 syntaxTrees.Add(GetPackageScriptImports());
@@ -300,6 +354,9 @@ public sealed class CsPackageManager : IDisposable
                 // load scripts data from files
                 foreach (string scriptPath in pair.Value.ScriptsFilePaths)
                 {
+#if DEBUG
+                    ModUtils.Logging.PrintMessage($"Found script located at {scriptPath}");
+#endif
                     var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText);
                     // could not load file data
                     if (state is not ModUtils.IO.IOActionResultState.Success)
@@ -355,6 +412,7 @@ public sealed class CsPackageManager : IDisposable
             // something was loaded, add to index
             if (id != Guid.Empty)
             {
+                ModUtils.Logging.PrintMessage($"Assemblies from CPackage {pair.Key.Name} loaded with Guid {id}.");
                 _loadedCompiledPackageAssemblies.Add(pair.Key, id);
                 _reverseLookupGuidList.Add(id, pair.Key);
             }

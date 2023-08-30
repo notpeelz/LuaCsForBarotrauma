@@ -13,10 +13,4 @@ public interface IAssemblyPlugin : IDisposable
     /// Called once all plugins have been loaded. if you have integrations with any other mod, put that code here.
     /// </summary>
     void OnLoadCompleted();
-    
-    /// <summary>
-    /// Gets plugin info and dependencies (not yet implemented).
-    /// </summary>
-    /// <returns></returns>
-    PluginInfo GetPluginInfo();
 }

@@ -39,9 +39,6 @@ namespace Barotrauma
         /// </summary>
         public virtual void OnLoadCompleted() { }
 
-        public virtual PluginInfo GetPluginInfo() =>
-            new PluginInfo("Undefined", "0.0.0.0", ImmutableArray<string>.Empty);
-
         public virtual void Dispose()
         {
             try
