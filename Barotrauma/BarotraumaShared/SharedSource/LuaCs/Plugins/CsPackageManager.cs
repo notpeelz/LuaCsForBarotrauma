@@ -261,12 +261,6 @@ public sealed class CsPackageManager : IDisposable
         // get packages
         IEnumerable<ContentPackage> packages = BuildPackagesList();
 
-#if DEBUG
-        #warning TODO: NEEDS TO BE REMOVED AFTER UPDATE IS LIVE!
-        //todo: remove after LuaCsForBarotrauma update hits the workshop!
-        packages = packages.Where(pack => !pack.Name.ToLowerInvariant().Replace(" ", "").Contains("moddingtoolkit"));   // bad mod :)
-#endif
-
         // check and load config
         _packageRunConfigs.AddRange(packages
             .Select(p => new KeyValuePair<ContentPackage, RunConfig>(p, GetRunConfigForPackage(p)))

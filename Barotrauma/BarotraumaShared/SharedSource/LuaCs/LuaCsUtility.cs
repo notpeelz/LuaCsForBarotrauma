@@ -260,10 +260,13 @@ namespace Barotrauma
         private static Type[] LoadDocTypes(XElement typesElem)
         {
             var result = new List<Type>();
-            var loadedTypes = GameMain.LuaCs.AssemblyManager
+            var loadedTypes = GameMain.LuaCs?.AssemblyManager?
                 .GetAllTypesInLoadedAssemblies()
                 .ToImmutableHashSet();
 
+            if (loadedTypes is null) 
+                return result.ToArray();
+            
             foreach (var elem in typesElem.Elements())
             {
                 var typesFound = loadedTypes.Where(t => t.Name.EndsWith(elem.Value)).ToImmutableList();

@@ -66,7 +66,6 @@ namespace Barotrauma
         public LuaCsPerformanceCounter PerformanceCounter { get; private set; }
 
         public AssemblyManager AssemblyManager { get; private set; }
-        
         public CsPackageManager PackageManager { get; private set; }
 
         public LuaCsModStore ModStore { get; private set; }
@@ -106,10 +105,17 @@ namespace Barotrauma
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="typeName"></param>
+        /// <param name="throwOnError"></param>
+        /// <param name="ignoreCase"></param>
+        /// <returns></returns>
         [Obsolete("Use AssemblyManager::GetTypesByName()")]
         public static Type GetType(string typeName, bool throwOnError = false, bool ignoreCase = false)
         {
-            return GameMain.LuaCs.AssemblyManager.GetTypesByName(typeName).FirstOrDefault((Type)null);
+            return GameMain.LuaCs?.AssemblyManager?.GetTypesByName(typeName).FirstOrDefault((Type)null);
         }
 
         public void ToggleDebugger(int port = 41912)
