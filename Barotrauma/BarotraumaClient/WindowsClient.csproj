@@ -1587,9 +1587,6 @@
     <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\MemoryFileAssemblyContextLoader.cs">
       <Link>SharedSource\LuaCs\Plugins\MemoryFileAssemblyContextLoader.cs</Link>
     </Compile>
-    <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\PluginInfo.cs">
-      <Link>SharedSource\LuaCs\Plugins\PluginInfo.cs</Link>
-    </Compile>
     <Compile Include="..\BarotraumaShared\SharedSource\LuaCs\Plugins\RunConfig.cs">
       <Link>SharedSource\LuaCs\Plugins\RunConfig.cs</Link>
     </Compile>
