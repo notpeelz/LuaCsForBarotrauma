@@ -273,16 +273,19 @@ public partial class AssemblyManager
     public AssemblyLoadingSuccessState LoadAssembliesFromLocations([NotNull] IEnumerable<string> filePaths,
         ref Guid id)
     {
-        // checks
+
         if (filePaths is null)
+        {
             throw new ArgumentNullException(
                 $"{nameof(AssemblyManager)}::{nameof(LoadAssembliesFromLocations)}() | file paths supplied is null!");
+        }
         
         ImmutableList<string> assemblyFilePaths = filePaths.ToImmutableList();  // copy the list before loading
-        
+
         if (!assemblyFilePaths.Any())
-            throw new ArgumentNullException(
-                $"{nameof(AssemblyManager)}::{nameof(LoadAssembliesFromLocations)}() | file paths supplied is empty!");
+        {
+            return AssemblyLoadingSuccessState.NoAssemblyFound;
+        }
         
         if (GetOrCreateACL(id, out var loadedAcl))
         {

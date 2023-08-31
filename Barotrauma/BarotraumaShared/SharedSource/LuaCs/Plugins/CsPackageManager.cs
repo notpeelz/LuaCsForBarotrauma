@@ -278,7 +278,11 @@ public sealed class CsPackageManager : IDisposable
         {
             ModUtils.Logging.PrintMessage($"{nameof(CsPackageManager)}: Unable to create reliable dependencies map.");
         }
-        _packagesDependencies.AddRange(packDeps);
+        
+        _packagesDependencies.AddRange(packDeps.ToDictionary(
+            kvp => kvp.Key, 
+            kvp => kvp.Value.ToImmutableList())
+        );
 
         List<ContentPackage> packagesToLoadInOrder = new();
 
@@ -324,9 +328,14 @@ public sealed class CsPackageManager : IDisposable
 
             // try load binary assemblies
             var id = Guid.Empty;    // id for the ACL for this package defined by AssemblyManager.
-            AssemblyLoadingSuccessState successState = AssemblyLoadingSuccessState.NoAssemblyFound;
-            if (pair.Value.AssembliesFilePaths is not null || pair.Value.AssembliesFilePaths.Any())
+            AssemblyLoadingSuccessState successState;
+            if (pair.Value.AssembliesFilePaths is not null && pair.Value.AssembliesFilePaths.Any())
             {
+                foreach (string assembliesFilePath in pair.Value.AssembliesFilePaths)
+                {
+                    ModUtils.Logging.PrintMessage($"Found assemblies located at {assembliesFilePath}");
+                }
+                
                 successState = _assemblyManager.LoadAssembliesFromLocations(pair.Value.AssembliesFilePaths, ref id);
                 // error
                 if (successState is not AssemblyLoadingSuccessState.Success)
@@ -351,7 +360,7 @@ public sealed class CsPackageManager : IDisposable
 #if DEBUG
                     ModUtils.Logging.PrintMessage($"Found script located at {scriptPath}");
 #endif
-                    var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText);
+                    var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText, null, false);
                     // could not load file data
                     if (state is not ModUtils.IO.IOActionResultState.Success)
                     {
@@ -384,6 +393,7 @@ public sealed class CsPackageManager : IDisposable
                     }
                 
                 }
+                
                 if (abortPackage)
                     continue;
             
@@ -459,7 +469,27 @@ public sealed class CsPackageManager : IDisposable
 
         return AssemblyLoadingSuccessState.Success;
     }
-
+    
+    /// <summary>
+    /// Gets the RunConfig.xml for the given package located at [cp_root]/CSharp/RunConfig.xml.
+    /// Generates a default config if one is not found. 
+    /// </summary>
+    /// <param name="package">The package to search for.</param>
+    /// <param name="config">RunConfig data.</param>
+    /// <returns>True if a config is loaded, false if one was created.</returns>
+    public static bool GetOrCreateRunConfig(ContentPackage package, out RunConfig config)
+    {
+        var path = System.IO.Path.Combine(Path.GetFullPath(package.Dir), "CSharp", "RunConfig.xml");
+        if (!File.Exists(path))
+        {
+            config = new RunConfig(true).Sanitize();
+            return false;
+        }
+        
+        ModUtils.Logging.PrintMessage($"Package has RunConfig. Package={package.Name} | Path={path}");
+        return ModUtils.IO.LoadOrCreateTypeXml(out config, path, () => new RunConfig(true).Sanitize(), false);
+    }
+    
     #endregion
 
     #region INTERNALS
@@ -481,33 +511,38 @@ public sealed class CsPackageManager : IDisposable
 
     private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
     {
-        string path = System.IO.Path.Combine(package.Path, "CSharp");
-        
-        if (!Directory.Exists(path))
-        {
-            scriptFilePaths = ImmutableList<string>.Empty;
-            return false;
-        }
+        string pathShared = Path.Combine(ModUtils.IO.GetContentPackageDir(package), "CSharp", "Shared");
+        string pathArch = Path.Combine(ModUtils.IO.GetContentPackageDir(package), "CSharp", ARCHITECTURE_TARGET);
 
-        scriptFilePaths = System.IO.Directory.GetFiles(System.IO.Path.Combine(path, "Shared"), SCRIPT_FILE_REGEX)
-            .Concat(System.IO.Directory.GetFiles(System.IO.Path.Combine(path, ARCHITECTURE_TARGET), SCRIPT_FILE_REGEX))
-            .ToImmutableList();
-        return scriptFilePaths.Any();
+        List<string> files = new();
+
+        if (Directory.Exists(pathShared))
+            files.AddRange(Directory.GetFiles(pathShared, SCRIPT_FILE_REGEX, SearchOption.AllDirectories));
+        if (Directory.Exists(pathArch))
+            files.AddRange(Directory.GetFiles(pathArch, SCRIPT_FILE_REGEX, SearchOption.AllDirectories));
+
+        if (files.Count > 0)
+        {
+            scriptFilePaths = files.ToImmutableList();
+            return true;
+        }
+        scriptFilePaths = ImmutableList<string>.Empty;
+        return false;
     }
 
     private static bool TryScanPackagesForAssemblies(ContentPackage package, out ImmutableList<string> assemblyFilePaths)
     {
-        string path = System.IO.Path.Combine(package.Path, "bin");
-        
+        string path = Path.Combine(ModUtils.IO.GetContentPackageDir(package), "bin", ARCHITECTURE_TARGET, PLATFORM_TARGET);
+
         if (!Directory.Exists(path))
         {
             assemblyFilePaths = ImmutableList<string>.Empty;
             return false;
         }
 
-        assemblyFilePaths = System.IO.Directory.GetFiles(System.IO.Path.Combine(path, ARCHITECTURE_TARGET, PLATFORM_TARGET), ASSEMBLY_FILE_REGEX)
+        assemblyFilePaths = System.IO.Directory.GetFiles(path, ASSEMBLY_FILE_REGEX, SearchOption.AllDirectories)
             .ToImmutableList();
-        return assemblyFilePaths.Any();
+        return assemblyFilePaths.Count > 0;
     }
 
     private static RunConfig GetRunConfigForPackage(ContentPackage package)
@@ -522,7 +557,7 @@ public sealed class CsPackageManager : IDisposable
         // get unique list of content packages. 
         // Note: there is an old issue where the AllPackages group
         // would sometimes not contain packages downloaded from the host, so we union enabled.
-        return ContentPackageManager.AllPackages.Union(ContentPackageManager.EnabledPackages.All);
+        return ContentPackageManager.AllPackages.Union(ContentPackageManager.EnabledPackages.All).Where(pack => !pack.Name.ToLowerInvariant().Equals("vanilla"));
     }
     
     private void LoadPlugins(bool force = false)
@@ -591,22 +626,6 @@ public sealed class CsPackageManager : IDisposable
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
     
-    /// <summary>
-    /// Gets the RunConfig.xml for the given package located at [cp_root]/CSharp/RunConfig.xml.
-    /// Generates a default config if one is not found. 
-    /// </summary>
-    /// <param name="package">The package to search for.</param>
-    /// <param name="config">RunConfig data.</param>
-    /// <returns>True if a config is loaded, false if one was created.</returns>
-    private static bool GetOrCreateRunConfig(ContentPackage package, out RunConfig config)
-    {
-        return ModUtils.IO.LoadOrCreateTypeXml(
-            out config, 
-            System.IO.Path.Combine(package.Path, "CSharp", "RunConfig.xml"), 
-            () => new RunConfig(true).Sanitize());
-    }
-
-
     /// <summary>
     /// Builds a list of ContentPackage dependencies for each of the packages in the list. Note: All dependencies must be included in the provided list of packages.
     /// </summary>

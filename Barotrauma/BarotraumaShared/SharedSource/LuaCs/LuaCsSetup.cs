@@ -280,7 +280,7 @@ namespace Barotrauma
         {
 
             // unregister types
-            foreach (Type type in AssemblyManager.GetAllTypesInLoadedAssemblies())
+            foreach (Type type in AssemblyManager.GetAllLoadedACLs().SelectMany(acl => acl.GetAssembliesTypes()))
             {
                 UserData.UnregisterType(type, true);
             }
@@ -437,7 +437,7 @@ namespace Barotrauma
                 }
                 catch (Exception e)
                 {
-                    ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}::{nameof(Initialize)}() | Error while loading assemblies!");
+                    ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}::{nameof(Initialize)}() | Error while loading assemblies! Details: {e.Message} | {e.StackTrace}");
                 }
 
             }

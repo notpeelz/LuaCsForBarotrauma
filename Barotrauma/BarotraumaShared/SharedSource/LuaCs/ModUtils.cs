@@ -65,6 +65,16 @@ public static class ModUtils
             return fileName;
         }
 
+        /// <summary>
+        /// Gets the sanitized path for the top-level directory for a given content package.
+        /// </summary>
+        /// <param name="package"></param>
+        /// <returns></returns>
+        public static string GetContentPackageDir(ContentPackage package)
+        {
+            return SanitizePath(Path.GetFullPath(package.Dir));
+        }
+
         public static string SanitizePath(string path)
         {
             foreach (char c in Path.GetInvalidPathChars())
@@ -72,10 +82,21 @@ public static class ModUtils
             return path.CleanUpPath();
         }
 
-        public static IOActionResultState GetOrCreateFileText(string filePath, out string fileText, Func<string> fileDataFactory = null)
+        public static IOActionResultState GetOrCreateFileText(string filePath, out string fileText, Func<string> fileDataFactory = null, bool createFile = true)
         {
             fileText = null;
-            IOActionResultState ioActionResultState = CreateFilePath(filePath, out var fp, fileDataFactory);
+            string fp = Path.GetFullPath(SanitizePath(filePath));
+
+            IOActionResultState ioActionResultState = IOActionResultState.Success;
+            if (createFile)
+            {
+                ioActionResultState = CreateFilePath(SanitizePath(filePath), out fp, fileDataFactory);
+            }
+            else if (!File.Exists(fp))
+            {
+                return IOActionResultState.FileNotFound;
+            }
+
             if (ioActionResultState == IOActionResultState.Success)
             {
                 try
@@ -230,10 +251,11 @@ public static class ModUtils
         /// <param name="instance"></param>
         /// <param name="filepath"></param>
         /// <param name="typeFactory"></param>
+        /// <param name="createFile"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public static bool LoadOrCreateTypeXml<T>(out T instance, 
-            string filepath, Func<T> typeFactory = null) where T : class, new()
+            string filepath, Func<T> typeFactory = null, bool createFile = true) where T : class, new()
         {
             instance = null;
             filepath = filepath.CleanUpPath();
@@ -249,7 +271,7 @@ public static class ModUtils
                             return sw.ToString();
                         }
                         return "";
-                    } : null))
+                    } : null, createFile))
             {
                 XmlSerializer s = new XmlSerializer(typeof(T));
                 try
@@ -274,7 +296,7 @@ public static class ModUtils
 
         public enum IOActionResultState
         {
-            Success, FilePathNull, FilePathInvalid, EntryMissing, DirectoryMissing, PathTooLong, InvalidOperation, IOFailure, UnknownError
+            Success, FileNotFound, FilePathNull, FilePathInvalid, DirectoryMissing, PathTooLong, InvalidOperation, IOFailure, UnknownError
         }
     }
     

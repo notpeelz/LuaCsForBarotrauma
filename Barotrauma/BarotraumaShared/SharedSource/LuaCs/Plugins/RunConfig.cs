@@ -58,12 +58,25 @@ public sealed class RunConfig
 
     public RunConfig Sanitize()
     {
-        Client = SanitizeRunSetting(Client);
-        Server = SanitizeRunSetting(Server);
-        if (Dependencies is null)
+        try
         {
-            Dependencies = new RunConfig.Dependency[] { };
+            Client = SanitizeRunSetting(Client);
         }
+        catch (Exception e)
+        {
+            Client = "None";
+        }
+
+        try
+        {
+            Server = SanitizeRunSetting(Server);
+        }
+        catch (Exception e)
+        {
+            Server = "None";
+        }
+        
+        Dependencies ??= new RunConfig.Dependency[] { };
 
         static string SanitizeRunSetting(string str) =>
             str switch
