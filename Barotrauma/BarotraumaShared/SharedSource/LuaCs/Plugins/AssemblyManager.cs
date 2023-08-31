@@ -258,12 +258,16 @@ public partial class AssemblyManager
         // compile
         var state = acl.Acl.CompileAndLoadScriptAssembly(compiledAssemblyName, syntaxTree, externalMetadataReferences,
             compilationOptions, out var messages);
-        
+
         // get types
         if (state is AssemblyLoadingSuccessState.Success)
         {
             acl.SafeRebuildTypesList();
             OnAssemblyLoaded?.Invoke(acl.Acl.CompiledAssembly);
+        }
+        else
+        {
+            ModUtils.Logging.PrintError($"Unable to compile assembly '{compiledAssemblyName}' due to errors: {messages}");
         }
 
         return state;
