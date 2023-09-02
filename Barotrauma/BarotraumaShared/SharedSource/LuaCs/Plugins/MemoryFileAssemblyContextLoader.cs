@@ -30,8 +30,8 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     // internal
     private readonly Dictionary<string, AssemblyDependencyResolver> _dependencyResolvers = new();       // path-folder, resolver
     protected bool IsResolving;   //this is to avoid circular dependency lookup.
-
     private AssemblyManager _assemblyManager;
+    public bool IsTemplateMode { get; set; } = false;
     
     public MemoryFileAssemblyContextLoader(AssemblyManager assemblyManager) : base(isCollectible: true)
     {
@@ -56,6 +56,9 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
                 continue;
             string sanitizedFilePath = System.IO.Path.GetFullPath(filepath).CleanUpPath();
             string directoryKey = System.IO.Path.GetDirectoryName(sanitizedFilePath);
+
+            if (directoryKey is null)
+                return AssemblyLoadingSuccessState.BadFilePath;
 
             // setup dep resolver if not available
             if (!_dependencyResolvers.ContainsKey(directoryKey) || _dependencyResolvers[directoryKey] is null)
@@ -116,6 +119,8 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     /// images not managed by the AssemblyManager class.</param>
     /// <param name="compilationOptions">CSharp compilation options. This method automatically adds the 'IgnoreAccessChecks' property for compilation.</param>
     /// <param name="compilationMessages">Will contain any diagnostic messages for compilation failure.</param>
+    /// <param name="externFileAssemblyReferences">Additional assemblies located in the FileSystem to build metadata references from.
+    /// Assemblies here will have duplicates by the same name that are currently loaded filtered out.</param>
     /// <returns>Success state of the operation.</returns>
     /// <exception cref="ArgumentNullException">Throws exception if any of the required arguments are null.</exception>
     public AssemblyLoadingSuccessState CompileAndLoadScriptAssembly(
@@ -123,7 +128,8 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
         [NotNull] IEnumerable<SyntaxTree> syntaxTrees,
         IEnumerable<MetadataReference> externMetadataReferences,
         [NotNull] CSharpCompilationOptions compilationOptions,
-        out string compilationMessages)
+        out string compilationMessages,
+        IEnumerable<Assembly> externFileAssemblyReferences = null)
     {
         compilationMessages = "";
 
@@ -131,6 +137,12 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
         {
             return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
+
+        var externAssemblyRefs = externFileAssemblyReferences is not null ? externFileAssemblyReferences.ToImmutableList() : ImmutableList<Assembly>.Empty;
+        var externAssemblyNames = externAssemblyRefs.Any() ? externAssemblyRefs
+                .Where(a => a.FullName is not null)
+                .Select(a => a.FullName).ToImmutableHashSet() 
+            : ImmutableHashSet<string>.Empty;
 
         // verifications
         if (assemblyName.IsNullOrWhiteSpace())
@@ -146,11 +158,21 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
         if (externMetadataReferences is not null)
             metadataReferences.AddRange(externMetadataReferences);
 
-        // build metadata refs from global where not an in-memory compiled assembly.
+        // build metadata refs from global where not an in-memory compiled assembly and not the same assembly as supplied.
         metadataReferences.AddRange(AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !(a.IsDynamic || string.IsNullOrEmpty(a.Location) || a.Location.Contains("xunit")))
+            .Where(a =>
+            {
+                if (a.IsDynamic || string.IsNullOrEmpty(a.Location) || a.Location.Contains("xunit"))
+                    return false;
+                if (a.FullName is null)
+                    return true;
+                return !externAssemblyNames.Contains(a.FullName);    // exclude duplicates
+            })
             .Select(a => MetadataReference.CreateFromFile(a.Location) as MetadataReference)
-            .ToList());
+            .Union(externAssemblyRefs   // add custom supplied assemblies
+                .Where(a => !(a.IsDynamic || string.IsNullOrEmpty(a.Location) || a.Location.Contains("xunit")))
+                .Select(a => MetadataReference.CreateFromFile(a.Location) as MetadataReference)
+            ).ToList());
             
         // build metadata refs from in-memory images
         foreach (var loadedAcl in _assemblyManager.GetAllLoadedACLs())
@@ -231,7 +253,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             //try resolve against other loaded alcs
             foreach (var loadedAcL in _assemblyManager.GetAllLoadedACLs())
             {
-                if (loadedAcL.Acl is null) continue;
+                if (loadedAcL.Acl is null || loadedAcL.Acl.IsTemplateMode) continue;
                 
                 try
                 {
@@ -241,7 +263,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
                 }
                 catch
                 {
-                    // LoadFromAssemblyName throws if it fails.
+                    // LoadFromAssemblyName throws, no need to propagate
                 }
             }
             

@@ -213,6 +213,12 @@ public partial class AssemblyManager
         }
     }
 
+    /// <summary>
+    /// Returns a list of all loaded ACLs.
+    /// WARNING: References to these ACLs outside of the AssemblyManager should be kept in a WeakReference in order
+    /// to avoid causing issues with unloading/disposal. 
+    /// </summary>
+    /// <returns></returns>
     public IEnumerable<LoadedACL> GetAllLoadedACLs()
     {
         try
@@ -240,7 +246,8 @@ public partial class AssemblyManager
         [NotNull] IEnumerable<SyntaxTree> syntaxTree,
         IEnumerable<MetadataReference> externalMetadataReferences,
         [NotNull] CSharpCompilationOptions compilationOptions,
-        ref Guid id)
+        ref Guid id,
+        IEnumerable<Assembly> externFileAssemblyRefs = null)
     {
         // validation
         if (compiledAssemblyName.IsNullOrWhiteSpace())
@@ -257,12 +264,12 @@ public partial class AssemblyManager
 
         // compile
         var state = acl.Acl.CompileAndLoadScriptAssembly(compiledAssemblyName, syntaxTree, externalMetadataReferences,
-            compilationOptions, out var messages);
+            compilationOptions, out var messages, externFileAssemblyRefs);
 
         // get types
         if (state is AssemblyLoadingSuccessState.Success)
         {
-            acl.SafeRebuildTypesList();
+            acl.RebuildTypesList();
             OnAssemblyLoaded?.Invoke(acl.Acl.CompiledAssembly);
         }
         else
@@ -273,7 +280,29 @@ public partial class AssemblyManager
         return state;
     }
 
+    /// <summary>
+    /// Switches the ACL with the given Guid to Template Mode, which disables assembly name resolution for any assemblies loaded in it.
+    /// These ACLs are intended to be used to host Assemblies for information only and not for code execution.
+    /// WARNING: This process is irreversible.
+    /// </summary>
+    /// <param name="guid">Guid of the ACL.</param>
+    /// <returns>Whether or not an ACL was found with the given ID.</returns>
+    public bool SetACLToTemplateMode(Guid guid)
+    {
+        if (!TryGetACL(guid, out var acl))
+            return false;
+        acl.Acl.IsTemplateMode = true;
+        return true;
+    }
     
+    /// <summary>
+    /// Tries to load all assemblies at the supplied file paths list into the ACl with the given Guid.
+    /// If the supplied Guid is Empty, then a new ACl will be created and the Guid will be assigned to it.
+    /// </summary>
+    /// <param name="filePaths">List of assemblies to try and load.</param>
+    /// <param name="id">Guid of the ACL or Empty if none specified. Guid of ACL will be assigned to this var.</param>
+    /// <returns>Operation success messages.</returns>
+    /// <exception cref="ArgumentNullException"></exception>
     public AssemblyLoadingSuccessState LoadAssembliesFromLocations([NotNull] IEnumerable<string> filePaths,
         ref Guid id)
     {
@@ -301,7 +330,7 @@ public partial class AssemblyManager
                 return state;
             }
             // build types list
-            loadedAcl.SafeRebuildTypesList();
+            loadedAcl.RebuildTypesList();
             foreach (Assembly assembly in loadedAcl.Acl.Assemblies)
             {
                 OnAssemblyLoaded?.Invoke(assembly);
@@ -340,6 +369,7 @@ public partial class AssemblyManager
                     }
 
                     UnloadingACLs.Add(new WeakReference<MemoryFileAssemblyContextLoader>(loadedAcl.Value.Acl, true));
+                    loadedAcl.Value.ClearTypesList();
                     loadedAcl.Value.Acl.Unload();
                     OnACLUnload?.Invoke(loadedAcl.Value.Id);
                 }
@@ -402,8 +432,32 @@ public partial class AssemblyManager
         return isUnloaded;
     }
     
+    /// <summary>
+    /// Tries to retrieve the LoadedACL with the given ID or null if none is found.
+    /// WARNING: External references to this ACL with long lifespans should be kept in a WeakReference
+    /// to avoid causing unloading/disposal issues.
+    /// </summary>
+    /// <param name="id">GUID of the ACL.</param>
+    /// <param name="acl">The found ACL or null if none was found.</param>
+    /// <returns>Whether or not an ACL was found.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public bool TryGetACL(Guid id, out LoadedACL acl)
+    {
+        acl = null;
+        OpsLockLoaded.EnterReadLock();
+        try
+        {
+            if (id.Equals(Guid.Empty) || !LoadedACLs.ContainsKey(id))
+                return false;
+            acl = LoadedACLs[id];
+            return true;
+        }
+        finally
+        {
+            OpsLockLoaded.ExitReadLock();
+        }
+    }
     
-    // acl crud
 
     /// <summary>
     /// Gets or creates an AssemblyCtxLoader for the given ID. Creates if the ID is empty or no ACL can be found.
@@ -451,30 +505,7 @@ public partial class AssemblyManager
             OpsLockLoaded.ExitUpgradeableReadLock();
         }
     }
-
-    /// <summary>
-    /// Tries to retrieve the LoadedACL with the given ID or null if none is found.
-    /// </summary>
-    /// <param name="id">GUID of the ACL.</param>
-    /// <param name="acl">The found ACL or null if none was found.</param>
-    /// <returns>Whether or not an ACL was found.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private bool TryGetACL(Guid id, out LoadedACL acl)
-    {
-        acl = null;
-        OpsLockLoaded.EnterReadLock();
-        try
-        {
-            if (id.Equals(Guid.Empty) || !LoadedACLs.ContainsKey(id))
-                return false;
-            acl = LoadedACLs[id];
-            return true;
-        }
-        finally
-        {
-            OpsLockLoaded.ExitReadLock();
-        }
-    }
+    
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private bool DisposeACL(Guid id)
@@ -546,23 +577,16 @@ public partial class AssemblyManager
         /// <summary>
         /// Rebuild the list of types from assemblies loaded in the AsmCtxLoader.
         /// </summary>
-        internal void SafeRebuildTypesList()
+        internal void RebuildTypesList()
         {
-            // Do not allow any unloading to occur while rebuilding this list.
-            _manager.OpsLockLoaded.EnterReadLock();
-            try
+            ClearTypesList();
+            foreach (Assembly assembly in Acl.Assemblies.ToImmutableList())
             {
-                AssembliesTypes.Clear();
-                foreach (Assembly assembly in Acl.Assemblies.ToImmutableList())
-                {
-                    AssembliesTypes.AddRange(assembly.GetSafeTypes());
-                }
-            }
-            finally
-            {
-                _manager.OpsLockLoaded.ExitReadLock();
+                AssembliesTypes.AddRange(assembly.GetSafeTypes());
             }
         }
+
+        internal void ClearTypesList() => AssembliesTypes.Clear();
     }
 
     #endregion

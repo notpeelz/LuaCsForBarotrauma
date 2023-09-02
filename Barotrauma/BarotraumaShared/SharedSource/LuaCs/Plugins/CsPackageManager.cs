@@ -74,6 +74,7 @@ public sealed class CsPackageManager : IDisposable
     private const string ASSEMBLY_FILE_REGEX = "*.dll";
 
     private readonly float _assemblyUnloadTimeoutSeconds = 10f;
+    private Guid _publicizedAssemblyLoader;
     private readonly List<ContentPackage> _currentPackagesByLoadOrder = new();
     private readonly Dictionary<ContentPackage, ImmutableList<ContentPackage>> _packagesDependencies = new();
     private readonly Dictionary<ContentPackage, Guid> _loadedCompiledPackageAssemblies = new();
@@ -213,6 +214,7 @@ public sealed class CsPackageManager : IDisposable
         _luaRegisteredTypes.Clear();
 
         _assemblyUnloadStartTime = DateTime.Now;
+        _publicizedAssemblyLoader = Guid.Empty;
         
         // we can't wait forever or app dies but we can try to be graceful
         while (!_assemblyManager.TryBeginDispose())
@@ -257,6 +259,34 @@ public sealed class CsPackageManager : IDisposable
         
         _assemblyManager.OnAssemblyLoaded += AssemblyManagerOnAssemblyLoaded;
         _assemblyManager.OnAssemblyUnloading += AssemblyManagerOnAssemblyUnloading;
+
+        // load publicized assemblies
+        var publicizedDir = Path.Combine(Environment.CurrentDirectory, "Publicized");
+        ImmutableList<Assembly> publicizedAssemblies = ImmutableList<Assembly>.Empty;
+        if (Directory.Exists(publicizedDir))
+        {
+            // search for assemblies
+            var list = Directory.GetFiles(publicizedDir, "*.dll")
+#if CLIENT
+                .Where(s => !s.ToLowerInvariant().EndsWith("dedicatedserver.dll"));            
+#elif SERVER
+                .Where(s => !s.ToLowerInvariant().EndsWith("barotrauma.dll"));
+#endif
+            
+            // try load them into an acl
+            var loadState = _assemblyManager.LoadAssembliesFromLocations(list, ref _publicizedAssemblyLoader);
+
+            // loaded
+            if (loadState is AssemblyLoadingSuccessState.Success)
+            {
+                if (_assemblyManager.TryGetACL(_publicizedAssemblyLoader, out var acl))
+                {
+                    publicizedAssemblies = acl.Acl.Assemblies.ToImmutableList();
+                    _assemblyManager.SetACLToTemplateMode(_publicizedAssemblyLoader);
+                }
+            }
+        }
+
 
         // get packages
         IEnumerable<ContentPackage> packages = BuildPackagesList();
@@ -403,7 +433,7 @@ public sealed class CsPackageManager : IDisposable
                     syntaxTrees, 
                     null, 
                     CompilationOptions, 
-                    ref id);
+                    ref id, publicizedAssemblies);
 
                 if (successState is not AssemblyLoadingSuccessState.Success)
                 {
