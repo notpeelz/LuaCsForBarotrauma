@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.IO;
-using System.Xml.Serialization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -64,9 +60,12 @@ public sealed class CsPackageManager : IDisposable
         new StringBuilder()
             .AppendLine("using System.Reflection;")
             .AppendLine("using Barotrauma;")
-            .AppendLine("using Luatrauma;")
+            .AppendLine("using System.Runtime.CompilerServices;")
+#if CLIENT
             .AppendLine("[assembly: IgnoresAccessChecksTo(\"Barotrauma\")]")
+#elif SERVER
             .AppendLine("[assembly: IgnoresAccessChecksTo(\"DedicatedServer\")]")
+#endif
             .ToString(),
         ScriptParseOptions);
 
@@ -387,9 +386,6 @@ public sealed class CsPackageManager : IDisposable
                 // load scripts data from files
                 foreach (string scriptPath in pair.Value.ScriptsFilePaths)
                 {
-#if DEBUG
-                    ModUtils.Logging.PrintMessage($"Found script located at {scriptPath}");
-#endif
                     var state = ModUtils.IO.GetOrCreateFileText(scriptPath, out string fileText, null, false);
                     // could not load file data
                     if (state is not ModUtils.IO.IOActionResultState.Success)
@@ -469,6 +465,7 @@ public sealed class CsPackageManager : IDisposable
         // instantiate and load
         LoadPlugins(true);
 
+        
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
         {

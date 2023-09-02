@@ -3,26 +3,27 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Threading;
-using Barotrauma;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Emit;
 
 // ReSharper disable EventNeverSubscribedTo.Global
 // ReSharper disable InconsistentNaming
 
 namespace Barotrauma;
 
+/***
+ * Note: This class was written to be thread-safe in order to allow parallelization in loading in the future if the need
+ * becomes necessary as there is almost no serial performance overhead for adding threading protection. 
+ */
+
 /// <summary>
 /// Provides functionality for the loading, unloading and management of plugins implementing IAssemblyPlugin.
 /// All plugins are loaded into their own AssemblyLoadContext along with their dependencies.
-/// WARNING: [BLOCKING] functions perform Write Locks and will cause performance issues when used in parallel.
 /// </summary>
 public partial class AssemblyManager
 {
