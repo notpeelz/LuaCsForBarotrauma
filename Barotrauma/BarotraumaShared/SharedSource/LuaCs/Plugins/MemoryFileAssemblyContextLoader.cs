@@ -40,9 +40,9 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
     
 
     /// <summary>
-    /// 
+    /// Try to load the list of disk-file assemblies.
     /// </summary>
-    /// <param name="assemblyFilePaths"></param>
+    /// <param name="assemblyFilePaths">Operation success or failure reason.</param>
     public AssemblyLoadingSuccessState LoadFromFiles([NotNull] IEnumerable<string> assemblyFilePaths)
     {
         if (assemblyFilePaths is null)
