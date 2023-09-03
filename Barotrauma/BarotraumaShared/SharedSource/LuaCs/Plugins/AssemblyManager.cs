@@ -333,6 +333,7 @@ public partial class AssemblyManager
             }
             // build types list
             loadedAcl.RebuildTypesList();
+            id = loadedAcl.Id;
             foreach (Assembly assembly in loadedAcl.Acl.Assemblies)
             {
                 OnAssemblyLoaded?.Invoke(assembly);
