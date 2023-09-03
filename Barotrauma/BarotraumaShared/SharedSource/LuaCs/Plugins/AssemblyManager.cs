@@ -348,11 +348,10 @@ public partial class AssemblyManager
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.Synchronized)]
     public bool TryBeginDispose()
     {
+        OpsLockLoaded.EnterWriteLock();
+        OpsLockUnloaded.EnterWriteLock();
         try
         {
-            OpsLockLoaded.EnterWriteLock();
-            OpsLockUnloaded.EnterWriteLock();
-            
             foreach (KeyValuePair<Guid, LoadedACL> loadedAcl in LoadedACLs)
             {
                 if (loadedAcl.Value.Acl is not null)

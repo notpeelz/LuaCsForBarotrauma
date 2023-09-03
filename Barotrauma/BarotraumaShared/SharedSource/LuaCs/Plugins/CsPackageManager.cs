@@ -196,6 +196,7 @@ public sealed class CsPackageManager : IDisposable
         }
         
         // cleanup plugins and assemblies
+        ReflectionUtils.ResetCache();
         UnloadPlugins();
 
         // try cleaning up the assemblies
@@ -232,6 +233,9 @@ public sealed class CsPackageManager : IDisposable
                 break;
             }
         }
+        
+        _assemblyManager.OnAssemblyLoaded -= AssemblyManagerOnAssemblyLoaded;
+        _assemblyManager.OnAssemblyUnloading -= AssemblyManagerOnAssemblyUnloading;
 
 
         // clear lists after cleaning up
@@ -527,11 +531,17 @@ public sealed class CsPackageManager : IDisposable
     
     private void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
     {
+#if DEBUG
+        ModUtils.Logging.PrintMessage($"ReflectUtils: Removing assembly {assembly}");
+#endif
         ReflectionUtils.RemoveAssemblyFromCache(assembly);
     }
 
     private void AssemblyManagerOnAssemblyLoaded(Assembly assembly)
     {
+#if DEBUG
+        ModUtils.Logging.PrintMessage($"ReflectUtils: Adding assembly {assembly}");
+#endif
         ReflectionUtils.AddNonAbstractAssemblyTypes(assembly);
     }
     

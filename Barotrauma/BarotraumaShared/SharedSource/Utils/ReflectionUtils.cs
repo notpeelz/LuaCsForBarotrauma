@@ -12,9 +12,6 @@ namespace Barotrauma
         private static readonly Dictionary<Assembly, ImmutableArray<Type>> cachedNonAbstractTypes
             = new Dictionary<Assembly, ImmutableArray<Type>>();
 
-        private static readonly Dictionary<Assembly, Dictionary<Type, ImmutableArray<Type>>> cachedDerivedNonAbstract
-            = new Dictionary<Assembly, Dictionary<Type, ImmutableArray<Type>>>();
-
         public static IEnumerable<Type> GetDerivedNonAbstract<T>()
         {
             Type t = typeof(T);
@@ -46,7 +43,11 @@ namespace Barotrauma
                         $"ReflectionUtils::AddNonAbstractAssemblyTypes() | The assembly [{assembly.GetName()}] already exists in the cache.");
                     return;
                 }
-                cachedNonAbstractTypes.Remove(assembly);
+
+                lock (cachedNonAbstractTypes)
+                {
+                    cachedNonAbstractTypes.Remove(assembly);
+                }
             }
 
             try
@@ -68,6 +69,15 @@ namespace Barotrauma
         /// <param name="assembly">Assembly to remove.</param>
         public static void RemoveAssemblyFromCache(Assembly assembly) => cachedNonAbstractTypes.Remove(assembly);
 
+        /// <summary>
+        /// Clears all cached assembly data and rebuilds types list only to include base Barotrauma types. 
+        /// </summary>
+        internal static void ResetCache()
+        {
+            cachedNonAbstractTypes.Clear();
+            cachedNonAbstractTypes.Add(typeof(ReflectionUtils).Assembly, typeof(ReflectionUtils).Assembly.GetSafeTypes().ToImmutableArray());
+        }
+        
         public static Option<TBase> ParseDerived<TBase, TInput>(TInput input) where TInput : notnull where TBase : notnull
         {
             static Option<TBase> none() => Option<TBase>.None();
