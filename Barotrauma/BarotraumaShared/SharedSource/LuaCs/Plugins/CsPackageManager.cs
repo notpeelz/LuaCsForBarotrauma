@@ -465,10 +465,12 @@ public sealed class CsPackageManager : IDisposable
                 }
             }
         }
-        
+
+        this.IsLoaded = true;        
         // instantiate and load
         LoadPlugins(true);
 
+        return AssemblyLoadingSuccessState.Success;
         
 
         bool ShouldRunPackage(ContentPackage package, RunConfig config)
@@ -497,8 +499,6 @@ public sealed class CsPackageManager : IDisposable
                     list.Add(newDisabledPackage);
             }
         }
-
-        return AssemblyLoadingSuccessState.Success;
     }
     
     /// <summary>
