@@ -36,15 +36,15 @@ public sealed class CsPackageManager : IDisposable
 #if WINDOWS
     private const string PLATFORM_TARGET = "Windows";
 #elif OSX
-    private static readonly string PLATFORM_TARGET = "OSX";
+    private const string PLATFORM_TARGET = "OSX";
 #elif LINUX
-    private static readonly string PLATFORM_TARGET = "Linux";
+    private const string PLATFORM_TARGET = "Linux";
 #endif
 
 #if CLIENT
     private const string ARCHITECTURE_TARGET = "Client";
 #elif SERVER
-    private static readonly string ARCHITECTURE_TARGET = "Server";
+    private const string ARCHITECTURE_TARGET = "Server";
 #endif
 
     private static readonly CSharpCompilationOptions CompilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
