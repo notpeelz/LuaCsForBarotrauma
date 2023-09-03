@@ -459,6 +459,10 @@ public sealed class CsPackageManager : IDisposable
             if (_assemblyManager.TryGetSubTypesFromACL<IAssemblyPlugin>(pair.Value, out var types))
             {
                 _pluginTypes[pair.Value] = types.ToImmutableHashSet();
+                foreach (var type in _pluginTypes[pair.Value])
+                {
+                    ModUtils.Logging.PrintMessage($"Loading type: {type.Name}");
+                }
             }
         }
         
@@ -599,7 +603,7 @@ public sealed class CsPackageManager : IDisposable
                 return;
             }
         }
-        
+
         foreach (var pair in _pluginTypes)
         {
             // instantiate
@@ -610,19 +614,19 @@ public sealed class CsPackageManager : IDisposable
                 else if (_loadedPlugins[pair.Key] is null)
                     _loadedPlugins[pair.Key] = new();
                 _loadedPlugins[pair.Key].Add((IAssemblyPlugin)Activator.CreateInstance(type));
-                ModUtils.Logging.PrintMessage($"Loaded the plugin of type: {type}");
             }
-
-            // bootstrap
-            foreach (var plugin in _loadedPlugins[pair.Key])
+        }
+        
+        
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            // init
+            foreach (var plugin in contentPlugins.Value)
             {
                 plugin.Initialize();
             }
-        }
-
-        // post load
-        foreach (var contentPlugins in _loadedPlugins)
-        {
+            
+            // post-init
             foreach (var plugin in contentPlugins.Value)
             {
                 plugin.OnLoadCompleted();

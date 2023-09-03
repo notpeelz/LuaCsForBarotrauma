@@ -328,6 +328,7 @@ public partial class AssemblyManager
             if (state != AssemblyLoadingSuccessState.Success)
             {
                 DisposeACL(loadedAcl.Id);
+                ModUtils.Logging.PrintError($"ACL failed, unloading...");
                 return state;
             }
             // build types list

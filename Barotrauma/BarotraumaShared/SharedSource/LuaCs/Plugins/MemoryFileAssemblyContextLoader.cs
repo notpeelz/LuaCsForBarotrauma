@@ -54,7 +54,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             // path verification
             if (filepath.IsNullOrWhiteSpace())
                 continue;
-            string sanitizedFilePath = System.IO.Path.GetFullPath(filepath).CleanUpPath();
+            string sanitizedFilePath = System.IO.Path.GetFullPath(filepath.CleanUpPath());
             string directoryKey = System.IO.Path.GetDirectoryName(sanitizedFilePath);
 
             if (directoryKey is null)
@@ -69,7 +69,7 @@ public class MemoryFileAssemblyContextLoader : AssemblyLoadContext
             // try loading the assemblies
             try
             {
-                LoadFromAssemblyPath(filepath.CleanUpPath());
+                LoadFromAssemblyPath(sanitizedFilePath);
             }
             // on fail of any we're done because we assume that loaded files are related. This ACL needs to be unloaded and collected.
             catch (ArgumentNullException ane)
