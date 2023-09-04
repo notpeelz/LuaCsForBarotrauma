@@ -22,7 +22,7 @@ public sealed class RunConfig
     /// List of dependencies by either Steam Workshop ID or by Partial Inclusive Name (ie. "ModDep" will match a mod named "A ModDependency").
     /// PIN Dependency checks if ContentPackage names contains the dependency string.
     /// </summary>
-    [XmlArrayItem(ElementName = "Dependency", IsNullable = true, Type = typeof(Dependency))]
+    [XmlArrayItem(ElementName = "Dependencies", IsNullable = true, Type = typeof(Dependency))]
     [XmlArray]
     public Dependency[] Dependencies { get; set; }
 
