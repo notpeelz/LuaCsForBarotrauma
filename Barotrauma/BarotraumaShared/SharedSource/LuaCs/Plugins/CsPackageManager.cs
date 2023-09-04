@@ -688,8 +688,9 @@ public sealed class CsPackageManager : IDisposable
                 foreach (RunConfig.Dependency dependency in config.Dependencies)
                 {
                     ContentPackage dep = packages.FirstOrDefault(p => 
-                        (dependency.SteamWorkshopId != 0 && p.TryExtractSteamWorkshopId(out var steamWorkshopId) && steamWorkshopId.Value == dependency.SteamWorkshopId) 
-                        || (!dependency.PackageName.IsNullOrWhiteSpace() && p.Name.Contains(dependency.PackageName)), null);
+                        (dependency.SteamWorkshopId != 0 && p.TryExtractSteamWorkshopId(out var steamWorkshopId) 
+                                                         && steamWorkshopId.Value == dependency.SteamWorkshopId) 
+                        || (!dependency.PackageName.IsNullOrWhiteSpace() && p.Name.ToLowerInvariant().Contains(dependency.PackageName.ToLowerInvariant())), null);
 
                     if (dep is not null)
                     {
