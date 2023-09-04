@@ -68,8 +68,9 @@ namespace Barotrauma
         // must be available at anytime
         private static AssemblyManager _assemblyManager;
         public static AssemblyManager AssemblyManager => _assemblyManager ??= new AssemblyManager();
+        
         private CsPackageManager _packageManager;
-        public CsPackageManager PackageManager => _packageManager ??= new CsPackageManager(AssemblyManager);
+        public CsPackageManager PackageManager => _packageManager ??= new CsPackageManager(AssemblyManager, this);
 
         public LuaCsModStore ModStore { get; private set; }
         private LuaRequire require { get; set; }
