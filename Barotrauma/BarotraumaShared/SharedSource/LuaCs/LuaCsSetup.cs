@@ -438,7 +438,7 @@ namespace Barotrauma
                         if(!PluginPackageManager.PluginsInitialized)
                             PluginPackageManager.InstancePlugins(true);
                         if(!PluginPackageManager.PluginsPreInit)
-                            PluginPackageManager.RunPluginsPreInit();
+                            PluginPackageManager.RunPluginsPreInit();   // this is intended to be called at startup in the future
                         if(!PluginPackageManager.PluginsLoaded)
                             PluginPackageManager.RunPluginsInit();
                         state = AssemblyLoadingSuccessState.Success;

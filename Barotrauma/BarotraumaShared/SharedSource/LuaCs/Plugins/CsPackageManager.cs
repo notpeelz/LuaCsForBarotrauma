@@ -580,7 +580,6 @@ public sealed class CsPackageManager : IDisposable
         
         if (PluginsPreInit)
         {
-            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' PreInitPatching() multiple times!");
             return;
         }
         
@@ -652,6 +651,8 @@ public sealed class CsPackageManager : IDisposable
                 }
                 if (plugin is not null)
                     _loadedPlugins[pair.Key].Add(plugin);
+                else
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while instantiating plugin of type {type}");
             }
         }
 
@@ -677,6 +678,7 @@ public sealed class CsPackageManager : IDisposable
 
         PluginsInitialized = false;
         PluginsPreInit = false;
+        PluginsLoaded = false;
     }
     
     
@@ -702,7 +704,7 @@ public sealed class CsPackageManager : IDisposable
 
     #region INTERNALS
 
-    private void TryRun(System.Action action, string messageMethodName, string messageTypeName)
+    private void TryRun(Action action, string messageMethodName, string messageTypeName)
     {
         try
         {
