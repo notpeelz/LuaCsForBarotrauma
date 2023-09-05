@@ -69,13 +69,14 @@ namespace Barotrauma
         private static AssemblyManager _assemblyManager;
         public static AssemblyManager AssemblyManager => _assemblyManager ??= new AssemblyManager();
         
-        private CsPackageManager _packageManager;
-        public CsPackageManager PackageManager => _packageManager ??= new CsPackageManager(AssemblyManager, this);
+        private CsPackageManager _pluginPackageManager;
+        public CsPackageManager PluginPackageManager => _pluginPackageManager ??= new CsPackageManager(AssemblyManager, this);
 
         public LuaCsModStore ModStore { get; private set; }
         private LuaRequire require { get; set; }
         public LuaCsSetupConfig Config { get; private set; }
         public MoonSharpVsCodeDebugServer DebugServer { get; private set; }
+        public bool IsInitialized { get; private set; }
 
         private bool ShouldRunCs
         {
@@ -285,9 +286,8 @@ namespace Barotrauma
             {
                 UserData.UnregisterType(type, true);
             }
-
-            // unload plugins, etc.
-            PackageManager.Dispose();
+            
+            PluginPackageManager.UnloadPlugins();   // stop plugin code execution
 
             if (Lua?.Globals is not null)
             {
@@ -309,18 +309,25 @@ namespace Barotrauma
 
             Hook?.Clear();
             ModStore.Clear();
+            LuaScriptLoader = null;
+            Lua = null;
+            
+            // we can only unload assemblies after clearing ModStore/references.
+            PluginPackageManager.Dispose();
+            
             Game = new LuaGame();
             Networking = new LuaCsNetworking();
             Timer = new LuaCsTimer();
             Steam = new LuaCsSteam();
             PerformanceCounter = new LuaCsPerformanceCounter();
-            LuaScriptLoader = null;
-            Lua = null;
+
+            IsInitialized = false;
         }
 
         public void Initialize(bool forceEnableCs = false)
         {
-            Stop();
+            if (IsInitialized)
+                Stop();
 
             LuaCsLogger.LogMessage("Lua! Version " + AssemblyInfo.GitRevision);
 
@@ -416,24 +423,37 @@ namespace Barotrauma
                     DebugConsole.AddWarning("Cs package active! Cs mods are NOT sandboxed, use it at your own risk!");
                 }
 
-                Lua.Globals["CsPackageManager"] = PackageManager;
+                Lua.Globals["PluginPackageManager"] = PluginPackageManager;
                 Lua.Globals["AssemblyManager"] = AssemblyManager;
                 
                 try
                 {
                     Stopwatch taskTimer = new();
-                    if (PackageManager.IsLoaded)
-                        PackageManager.Dispose();
-                    var state = PackageManager.LoadAssemblyPackages();
-                    taskTimer.Stop();
-                    if (state is not AssemblyLoadingSuccessState.Success)
+                    taskTimer.Start();
+                    ModStore.Clear();
+                    
+                    var state = PluginPackageManager.LoadAssemblyPackages();
+                    if (state is AssemblyLoadingSuccessState.Success or AssemblyLoadingSuccessState.AlreadyLoaded)
                     {
-                        ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}: Error while loading Cs-Assembly Mods | Err: {state}");
-                        PackageManager.Dispose();   // cleanup
+                        if(!PluginPackageManager.PluginsInitialized)
+                            PluginPackageManager.InstancePlugins(true);
+                        if(!PluginPackageManager.PluginsPreInit)
+                            PluginPackageManager.RunPluginsPreInit();
+                        if(!PluginPackageManager.PluginsLoaded)
+                            PluginPackageManager.RunPluginsInit();
+                        state = AssemblyLoadingSuccessState.Success;
+                        taskTimer.Stop();
+                        ModUtils.Logging.PrintMessage($"{nameof(LuaCsSetup)}: Completed assembly loading. Total time {taskTimer.ElapsedMilliseconds}ms.");
                     }
                     else
                     {
-                        ModUtils.Logging.PrintMessage($"{nameof(LuaCsSetup)}: Completed assembly loading. Total time {taskTimer.ElapsedMilliseconds}ms.");
+                        PluginPackageManager.Dispose(); // cleanup if there's an error
+                    }
+                    
+                    if(state is not AssemblyLoadingSuccessState.Success)
+                    {
+                        ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}: Error while loading Cs-Assembly Mods | Err: {state}");
+                        taskTimer.Stop();
                     }
                 }
                 catch (Exception e)
@@ -441,6 +461,7 @@ namespace Barotrauma
                     ModUtils.Logging.PrintError($"{nameof(LuaCsSetup)}::{nameof(Initialize)}() | Error while loading assemblies! Details: {e.Message} | {e.StackTrace}");
                 }
 
+                IsInitialized = true;
             }
 
 

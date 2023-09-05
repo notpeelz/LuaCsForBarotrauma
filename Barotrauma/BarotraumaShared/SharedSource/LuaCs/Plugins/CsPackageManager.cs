@@ -84,7 +84,6 @@ public sealed class CsPackageManager : IDisposable
     private readonly Dictionary<Guid, ImmutableList<Type>> _luaRegisteredTypes = new();
     private readonly AssemblyManager _assemblyManager;
     private readonly LuaCsSetup _luaCsSetup;
-    private bool _pluginsLoaded = false;
     private DateTime _assemblyUnloadStartTime;
 
 
@@ -102,7 +101,7 @@ public sealed class CsPackageManager : IDisposable
     /// <returns></returns>
     public bool LuaTryRegisterPackageTypes(string name, bool caseSensitive = false)
     {
-        if (!IsLoaded)
+        if (!AssembliesLoaded)
             return false;
         var matchingPacks = _loadedCompiledPackageAssemblies
             .Where(kvp => kvp.Key.Name.ToLowerInvariant().Contains(name.ToLowerInvariant()))
@@ -134,7 +133,27 @@ public sealed class CsPackageManager : IDisposable
 
     #endregion
     
-    public bool IsLoaded { get; private set; }
+    /// <summary>
+    /// Whether or not assemblies have been loaded.
+    /// </summary>
+    public bool AssembliesLoaded { get; private set; }
+    
+    
+    /// <summary>
+    /// Whether or not loaded plugins had their preloader run.
+    /// </summary>
+    public bool PluginsPreInit { get; private set; }
+    
+    /// <summary>
+    /// Whether or not plugins' types have been instantiated.
+    /// </summary>
+    public bool PluginsInitialized { get; private set; } = false;
+
+    /// <summary>
+    /// Whether or not plugins are fully loaded.
+    /// </summary>
+    public bool PluginsLoaded { get; private set; } = false;
+
     public IEnumerable<ContentPackage> GetCurrentPackagesByLoadOrder() => _currentPackagesByLoadOrder;
 
     /// <summary>
@@ -238,7 +257,8 @@ public sealed class CsPackageManager : IDisposable
         _assemblyManager.OnAssemblyLoaded -= AssemblyManagerOnAssemblyLoaded;
         _assemblyManager.OnAssemblyUnloading -= AssemblyManagerOnAssemblyUnloading;
 
-
+        _publicizedAssemblyLoader = Guid.Empty;
+            
         // clear lists after cleaning up
         _packagesDependencies.Clear();
         _loadedCompiledPackageAssemblies.Clear();
@@ -246,7 +266,8 @@ public sealed class CsPackageManager : IDisposable
         _packageRunConfigs.Clear();
         _currentPackagesByLoadOrder.Clear();
 
-        IsLoaded = false;
+        AssembliesLoaded = false;
+        GC.SuppressFinalize(this);  
     }
 
     /// <summary>
@@ -255,9 +276,8 @@ public sealed class CsPackageManager : IDisposable
     /// <returns></returns>
     public AssemblyLoadingSuccessState LoadAssemblyPackages()
     {
-        if (IsLoaded)
+        if (AssembliesLoaded)
         {
-            LuaCsLogger.LogError($"{nameof(CsPackageManager)}::{nameof(LoadAssemblyPackages)}() | Attempted to load packages when already loaded!");
             return AssemblyLoadingSuccessState.AlreadyLoaded;
         }
         
@@ -475,10 +495,7 @@ public sealed class CsPackageManager : IDisposable
             }
         }
 
-        this.IsLoaded = true;        
-        // instantiate and load
-        LoadPlugins(true);
-
+        this.AssembliesLoaded = true;
         return AssemblyLoadingSuccessState.Success;
         
 
@@ -504,6 +521,166 @@ public sealed class CsPackageManager : IDisposable
     }
     
     /// <summary>
+    /// Executes instantiated plugins' Initialize() and OnLoadCompleted() methods. 
+    /// </summary>
+    public void RunPluginsInit()
+    {
+        if (!AssembliesLoaded)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' Initialize() without any loaded assemblies!");
+            return;
+        }
+        
+        if (!PluginsInitialized)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' Initialize() without type instantiation!");
+            return;
+        }
+     
+        if (PluginsLoaded)
+            return;
+        
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            // init
+            foreach (var plugin in contentPlugins.Value)
+            {
+                TryRun(() => plugin.Initialize(), $"{nameof(IAssemblyPlugin.Initialize)}", plugin.GetType().Name);
+            }
+        }
+        
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            // load complete
+            foreach (var plugin in contentPlugins.Value)
+            {
+                TryRun(() => plugin.OnLoadCompleted(), $"{nameof(IAssemblyPlugin.OnLoadCompleted)}", plugin.GetType().Name);
+            }
+        }
+
+        PluginsLoaded = true;
+    }
+
+    /// <summary>
+    /// Executes instantiated plugins' PreInitPatching() method. 
+    /// </summary>
+    public void RunPluginsPreInit()
+    {
+        if (!AssembliesLoaded)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' PreInitPatching() without any loaded assemblies!");
+            return;
+        }
+
+        if (!PluginsInitialized)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' PreInitPatching() without type initialization!");
+            return;
+        }
+        
+        if (PluginsPreInit)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to call plugins' PreInitPatching() multiple times!");
+            return;
+        }
+        
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            // init
+            foreach (var plugin in contentPlugins.Value)
+            {
+                TryRun(() => plugin.PreInitPatching(), $"{nameof(IAssemblyPlugin.PreInitPatching)}", plugin.GetType().Name);
+            }
+        }
+
+        PluginsPreInit = true;
+    }
+
+    /// <summary>
+    /// Initializes plugin types that are registered.
+    /// </summary>
+    /// <param name="force"></param>
+    public void InstancePlugins(bool force = false)
+    {
+        if (!AssembliesLoaded)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to instantiate plugins without any loaded assemblies!");
+            return;
+        }
+        
+        if (PluginsInitialized)
+        {
+            if (force)
+                UnloadPlugins();
+            else
+            {
+                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to load plugins when they were already loaded!");
+                return;
+            }
+        }
+
+        foreach (var pair in _pluginTypes)
+        {
+            // instantiate
+            foreach (Type type in pair.Value)
+            {
+                if (!_loadedPlugins.ContainsKey(pair.Key))
+                    _loadedPlugins.Add(pair.Key, new());
+                else if (_loadedPlugins[pair.Key] is null)
+                    _loadedPlugins[pair.Key] = new();
+                IAssemblyPlugin plugin = null;
+                try
+                {
+                   plugin = (IAssemblyPlugin)Activator.CreateInstance(type);
+                }
+                catch (Exception e)
+                {
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while instantiating plugin of type {type}");
+#if DEBUG
+                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
+#endif
+                    try
+                    {
+                        plugin?.Dispose();  // hopefully the plugin cleans up any hooks/extern refs.
+                    }
+                    catch
+                    {
+                        //ignore
+                    }
+
+                    plugin = null;
+                }
+                if (plugin is not null)
+                    _loadedPlugins[pair.Key].Add(plugin);
+            }
+        }
+
+        PluginsInitialized = true;
+    }
+
+    /// <summary>
+     /// Unloads all plugins by calling Dispose() on them. Note: This does not remove their external references nor
+     /// unregister their types. 
+     /// </summary>
+    public void UnloadPlugins()
+    {
+        foreach (var contentPlugins in _loadedPlugins)
+        {
+            foreach (var plugin in contentPlugins.Value)
+            {
+                TryRun(() => plugin.Dispose(), $"{nameof(IAssemblyPlugin.Dispose)}", plugin.GetType().Name);
+            }
+            contentPlugins.Value.Clear();
+        }
+        
+        _loadedPlugins.Clear();
+
+        PluginsInitialized = false;
+        PluginsPreInit = false;
+    }
+    
+    
+    /// <summary>
     /// Gets the RunConfig.xml for the given package located at [cp_root]/CSharp/RunConfig.xml.
     /// Generates a default config if one is not found. 
     /// </summary>
@@ -524,6 +701,21 @@ public sealed class CsPackageManager : IDisposable
     #endregion
 
     #region INTERNALS
+
+    private void TryRun(System.Action action, string messageMethodName, string messageTypeName)
+    {
+        try
+        {
+            action?.Invoke();
+        }
+        catch (Exception e)
+        {
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while running {messageMethodName}() on plugin of type {messageTypeName}");
+#if DEBUG
+            ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
+#endif
+        }
+    }
     
     private void AssemblyManagerOnAssemblyUnloading(Assembly assembly)
     {
@@ -539,6 +731,11 @@ public sealed class CsPackageManager : IDisposable
     {
         this._assemblyManager = assemblyManager;
         this._luaCsSetup = luaCsSetup;
+    }
+
+    ~CsPackageManager()
+    {
+        this.Dispose();
     }
 
     private static bool TryScanPackageForScripts(ContentPackage package, out ImmutableList<string> scriptFilePaths)
@@ -591,110 +788,8 @@ public sealed class CsPackageManager : IDisposable
         // would sometimes not contain packages downloaded from the host, so we union enabled.
         return ContentPackageManager.AllPackages.Union(ContentPackageManager.EnabledPackages.All).Where(pack => !pack.Name.ToLowerInvariant().Equals("vanilla"));
     }
-    
-    private void LoadPlugins(bool force = false)
-    {
-        if (_pluginsLoaded)
-        {
-            if (force)
-                UnloadPlugins();
-            else
-            {
-                ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Attempted to load plugins when they were already loaded!");
-                return;
-            }
-        }
 
-        foreach (var pair in _pluginTypes)
-        {
-            // instantiate
-            foreach (Type type in pair.Value)
-            {
-                if (!_loadedPlugins.ContainsKey(pair.Key))
-                    _loadedPlugins.Add(pair.Key, new());
-                else if (_loadedPlugins[pair.Key] is null)
-                    _loadedPlugins[pair.Key] = new();
-                try
-                {
-                    _loadedPlugins[pair.Key].Add((IAssemblyPlugin)Activator.CreateInstance(type));
-                }
-                catch (Exception e)
-                {
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while instantiating plugin of type {type}");
-#if DEBUG
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
-#endif
-                }
-            }
-        }
-        
-        
-        foreach (var contentPlugins in _loadedPlugins)
-        {
-            // init
-            foreach (var plugin in contentPlugins.Value)
-            {
-                try
-                {
-                    plugin.Initialize();
-                }
-                catch (Exception e)
-                {
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while running Initialize() on plugin of type {plugin.GetType()}");
-#if DEBUG
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
-#endif
-                }
-            }
-            
-            // post-init
-            foreach (var plugin in contentPlugins.Value)
-            {
-                try
-                {
-                    plugin.OnLoadCompleted();
-                }
-                catch (Exception e)
-                {
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while running OnLoadCompleted() on plugin of type {plugin.GetType()}");
-#if DEBUG
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
-#endif
-                }
-            }
-        }
 
-        _pluginsLoaded = true;
-    }
-
-    private void UnloadPlugins()
-    {
-        foreach (var contentPlugins in _loadedPlugins)
-        {
-            foreach (var plugin in contentPlugins.Value)
-            {
-                try
-                {
-                    plugin.Dispose();
-                }
-                catch (Exception e)
-                {
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Error while running Dispose() on plugin of type {plugin.GetType()}");
-#if DEBUG
-                    ModUtils.Logging.PrintError($"{nameof(CsPackageManager)}: Details: {e.Message} | {e.InnerException}");
-#endif
-                }
-            }
-            contentPlugins.Value.Clear();
-        }
-        
-        _loadedPlugins.Clear();
-
-        _pluginsLoaded = false;
-    }
-    
-    
-    
     private static SyntaxTree GetPackageScriptImports() => BaseAssemblyImports;
 
     

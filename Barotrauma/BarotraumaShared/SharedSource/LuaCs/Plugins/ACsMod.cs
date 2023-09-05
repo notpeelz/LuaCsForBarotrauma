@@ -38,6 +38,12 @@ namespace Barotrauma
         /// </summary>
         public virtual void OnLoadCompleted() { }
 
+        /// <summary>
+        /// [NotImplemented] Called before vanilla content is loaded. Use to patch Barotrauma classes before they're
+        /// instantiated.
+        /// </summary>
+        public void PreInitPatching() { }
+
         public virtual void Dispose()
         {
             try
