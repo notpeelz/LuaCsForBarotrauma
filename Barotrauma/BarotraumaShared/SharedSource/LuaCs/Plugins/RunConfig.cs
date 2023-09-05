@@ -9,20 +9,18 @@ public sealed class RunConfig
     /// <summary>
     /// How should scripts be run on the server.
     /// </summary>
-    [XmlElement(ElementName = "Server")]
-    public string Server { get; set; }
-    
+    [XmlElement(ElementName = "Server")] public string Server;
+
     /// <summary>
     /// How should scripts be run on the client. 
     /// </summary>
-    [XmlElement(ElementName = "Client")]
-    public string Client { get; set; }
+    [XmlElement(ElementName = "Client")] public string Client;
 
     /// <summary>
     /// List of dependencies by either Steam Workshop ID or by Partial Inclusive Name (ie. "ModDep" will match a mod named "A ModDependency").
     /// PIN Dependency checks if ContentPackage names contains the dependency string.
     /// </summary>
-    [XmlArrayItem(ElementName = "Dependencies", IsNullable = true, Type = typeof(Dependency))]
+    [XmlArrayItem(ElementName = "Dependency", IsNullable = true, Type = typeof(Dependency))]
     [XmlArray]
     public Dependency[] Dependencies { get; set; }
 
@@ -47,13 +45,13 @@ public sealed class RunConfig
         /// Steam Workshop ID of the dependency.
         /// </summary>
         [XmlElement(ElementName = "SteamWorkshopId")]
-        public ulong SteamWorkshopId { get; set; }
-        
+        public ulong SteamWorkshopId;
+
         /// <summary>
         /// Package Name of the dependency. Not needed if SteamWorkshopId is set.
         /// </summary>
         [XmlElement(ElementName = "PackageName")]
-        public string PackageName { get; set; }
+        public string PackageName;
     }
 
     public RunConfig Sanitize()
@@ -83,10 +81,31 @@ public sealed class RunConfig
             {
                 null => "None",
                 "" => "None",
+                " " => "None",
                 _ => str[0].ToString().ToUpper() + str.Substring(1).ToLower()
             };
 
         return this;
     }
+
+    public bool IsForced()
+    {
+#if CLIENT
+        return this.Client.Equals("Forced");
+#elif SERVER
+        return this.Server.Equals("Forced");
+#endif
+    }
     
+    public bool IsStandard()
+    {
+#if CLIENT
+        return this.Client.Equals("Standard");
+#elif SERVER
+        return this.Server.Equals("Standard");
+#endif
+    }
+
+    public bool IsForcedOrStandard() => this.IsForced() || this.IsStandard();
+
 }
