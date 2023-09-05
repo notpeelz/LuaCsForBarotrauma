@@ -180,8 +180,9 @@ public partial class AssemblyManager
         {
             return AssemblyLoadContext.Default.Assemblies
                 .SelectMany(a => a.GetSafeTypes())
-                .Where(t => t.Name.EndsWith(name) && !t.IsInterface)
+                .Where(t => t.FullName?.EndsWith(name) ?? t.Name.EndsWith(name) && !t.IsInterface)
                 .Concat(LoadedACLs
+                    .Where(ldacl => !ldacl.Value.Acl.IsTemplateMode)
                     .SelectMany(kvp => kvp.Value.GetAssembliesTypes()
                         .Where(t => t.Name.EndsWith(name) && !t.IsInterface)))
                 .ToImmutableList();
