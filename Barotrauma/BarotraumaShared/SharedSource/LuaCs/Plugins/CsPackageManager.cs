@@ -365,10 +365,13 @@ public sealed class CsPackageManager : IDisposable
             AssemblyLoadingSuccessState successState;
             if (pair.Value.AssembliesFilePaths is not null && pair.Value.AssembliesFilePaths.Any())
             {
+                ModUtils.Logging.PrintMessage($"Loading assemblies for CPackage {pair.Key.Name}");
+#if DEBUG
                 foreach (string assembliesFilePath in pair.Value.AssembliesFilePaths)
                 {
-                    ModUtils.Logging.PrintMessage($"Found assemblies located at {assembliesFilePath}");
+                    ModUtils.Logging.PrintMessage($"Found assemblies located at {Path.GetFullPath(ModUtils.IO.SanitizePath(assembliesFilePath))}");
                 }
+#endif
                 
                 successState = _assemblyManager.LoadAssembliesFromLocations(pair.Value.AssembliesFilePaths, ref id);
 
