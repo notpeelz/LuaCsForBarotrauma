@@ -142,3 +142,4 @@ RegisterBarotrauma("UISprite")
 RegisterBarotrauma("ParamsEditor")
 
 RegisterBarotrauma("Inventory+SlotReference")
+RegisterBarotrauma("VisualSlot")
